@@ -1,0 +1,73 @@
+# Plugin prefix (use %prefix% in messages)
+prefix: "&b&lНаказания &7| &r"
+
+# Word for permanent punishment
+permanent_word: "навсегда"
+
+# Server name (used in sync modes)
+server_name: "survival"
+
+geoip:
+  whitelist: []          # например, ["RU", "US", "Russia", "United States"]
+  blacklist: []          # например, ["CN", "KP", "China"]
+  block_message: "%prefix%&cДоступ с вашей страны (%country%) запрещён."
+
+# Synchronization mode: single, sync, sync_static
+mode: "single"
+
+sync:
+  ban_check_interval_seconds: 10
+  punishment_sync_interval_seconds: 10
+
+# Time units localization
+time_units:
+  second:
+    one: "секунду"
+    few: "секунды"
+    many: "секунд"
+  minute:
+    one: "минуту"
+    few: "минуты"
+    many: "минут"
+  hour:
+    one: "час"
+    few: "часа"
+    many: "часов"
+  day:
+    one: "день"
+    few: "дня"
+    many: "дней"
+
+warn_thresholds:
+  2: "mute 1h"
+  3: "tempban 1d"
+  5: "ban"
+  10: "jail 7d"
+
+# Muted command blacklist
+muted_command_blacklist:
+  - "me"
+  - "msg"
+  - "tell"
+  - "w"
+  - "reply"
+
+# Database settings
+database:
+  type: "h2"
+  h2:
+    file: "data"
+  mysql:
+    host: "localhost"
+    port: 3306
+    database: "punishments"
+    user: "root"
+    password: "password"
+    poolSize: 10
+
+# Date formats
+history:
+  date_format: "dd.MM.yyyy HH:mm:ss"
+punlist:
+  entries_per_page: 10
+  date_format: "dd.MM.yyyy HH:mm:ss"

@@ -1,0 +1,258 @@
+# ============================================================
+#                   GENERAL MESSAGES
+# ============================================================
+
+# Statuses for history and punishment list
+status_active: "&aActive"
+status_expired: "&eExpired"
+status_pardoned: "&cPardoned"
+
+# Errors and info messages
+no_permission: "%prefix%&cYou do not have permission to use this command."
+player_not_found: "%prefix%&cPlayer %target% not found."
+invalid_time: "%prefix%&cInvalid time format. Examples: 1h30m (1 hour 30 minutes), 2d (2 days), 30m (30 minutes)."
+limit_exceed: "%prefix%&cYou cannot issue a punishment longer than %max% (your group: %group%)."
+target_immune_group: "%prefix%&cPlayer %target% belongs to group %group% which cannot be punished."
+target_immune_permission: "%prefix%&cPlayer %target% is immune to this punishment type."
+punishment_not_found: "%prefix%&cPunishment with ID %id% not found."
+punishment_deleted: "%prefix%&aPunishment #%id% successfully deleted from database."
+reason_updated: "%prefix%&aReason for punishment #%id% changed to: %reason%"
+no_history: "%prefix%&cPlayer %target% has no punishment history."
+reload_success: "%prefix%&aConfiguration and presets reloaded successfully."
+cannot_punish_self: "%prefix%&cYou cannot punish yourself."
+preset_not_found: "%prefix%&cPreset not found: %name%"
+preset_wrong_type: "%prefix%&cPreset %preset% cannot be used with /%command%"
+preset_has_duration: "%prefix%&cPreset %preset% has a duration. Use /%command%"
+preset_no_duration: "%prefix%&cPreset %preset% has no duration. Use /%command%"
+cannot_punish_higher_priority: "%prefix%&cYou cannot punish %target% with higher priority (yours: %issuer_priority%, theirs: %target_priority%)."
+command_on_cooldown: "%prefix%&cYou cannot use /%command% for another %time% seconds."
+silent_not_allowed: "%prefix%&cYou do not have permission to use silent mode (-s) for /%command%."
+server_argument_not_supported: "%prefix%&cThe server: argument is only supported in sync and sync_static modes."
+no_server_permission: "%prefix%&cYou do not have permission to use the server: flag in %command% command."
+no_preset_permission: "%prefix%&cYou do not have permission to use preset %preset%."
+
+# Punishment modification commands
+altduration_usage: "%prefix%&cUsage: /altduration <ID> <duration> (e.g., 2h, 30m, 7d)"
+cannot_change_duration_permanent: "%prefix%&cThis punishment is permanent, its duration cannot be changed."
+duration_updated: "%prefix%&aDuration of punishment #%id% changed to %duration%."
+
+# Deleting punishments
+droppunish_usage: "%prefix%&cUsage: /droppunish <ID>"
+droppunish_all_confirm: "&cWARNING! You are about to delete ALL punishments (bans, mutes, kicks, jails, warns). This action is irreversible. To confirm, run: /droppunish all confirm"
+droppunish_all_success: "&aAll punishments successfully deleted."
+
+# ============================================================
+#                      BANS (BAN / TEMPBAN)
+# ============================================================
+
+ban_already: "%prefix%&cPlayer %target% is already banned."
+not_banned: "%prefix%&cPlayer %target% is not banned."
+
+# Broadcasts
+ban_broadcast: "%prefix%&c❱ %sender% banned %target% permanently. &6Reason: %reason% (ID: #%id%)"
+tempban_broadcast: "%prefix%&c❱ %sender% temporarily banned %target% for %duration%. &6Reason: %reason% (ID: #%id%)"
+unban_broadcast: "%prefix%&a❱ %sender% unbanned player %target% (ID: #%id%)."
+
+# Player messages
+ban_player: "&c✖ You have been permanently banned.\nReason: %reason%\nAdmin: %sender%\nServer: %server%\nID: #%id%"
+tempban_player: "&c✖ You have been temporarily banned for %duration%.\nReason: %reason%\nAdmin: %sender%\nServer: %server%\nID: #%id%"
+
+# ============================================================
+#                      MUTES (MUTE / TEMPMUTE)
+# ============================================================
+
+mute_already: "%prefix%&cPlayer %target% is already muted."
+not_muted: "%prefix%&cPlayer %target% is not muted."
+mute_expired: "&aYour mute has expired. You can now chat again."
+tempmute_expired: "&aYour temporary mute has expired. You can now chat again."
+
+# Broadcasts
+mute_broadcast: "%prefix%&e❱ %sender% muted %target% permanently. &6Reason: %reason% (ID: #%id%)"
+tempmute_broadcast: "%prefix%&e❱ %sender% temporarily muted %target% for %duration%. &6Reason: %reason% (ID: #%id%)"
+unmute_broadcast: "%prefix%&a❱ %sender% unmuted player %target% (ID: #%id%)."
+
+# Player messages
+mute_player: "&c✖ You have been muted by %sender% permanently. Reason: %reason%\nServer: %server%\nID: #%id%"
+tempmute_player: "&c✖ You have been temporarily muted by %sender% for %duration%. Reason: %reason%\nServer: %server%\nID: #%id%"
+
+# Command and chat blocking
+muted_command_blocked: "%prefix%&cYou are muted and cannot use the /%command% command."
+cannot_chat: "&c✖ You are muted by %sender% for %duration%. Reason: %reason%. \nServer: %server%"
+
+# ============================================================
+#                      KICKS (KICK)
+# ============================================================
+
+kick_broadcast: "%prefix%&6❱ %sender% kicked %target%. &cReason: %reason%"
+kick_player: "&c✖ You have been kicked.\nReason: %reason%\nAdmin: %sender%"
+
+# ============================================================
+#                      IP BANS (BANIP / UNBANIP)
+# ============================================================
+
+ip_not_found_for_player: "%prefix%&cNo IP ban found for player %target%."
+ip_not_banned: "%prefix%&cIP address %target% is not banned."
+ip_banned_already: "%prefix%&cIP address of player %target% is already banned."
+ip_not_banned_for_player: "%prefix%&cPlayer %target% does not have an active IP ban."
+ip_unbanned: "%prefix%&aIP address %target% has been unbanned."
+
+banip_broadcast: "%prefix%&c❱ %sender% IP-banned player %target% permanently. &6Reason: %reason% (ID: #%id%)"
+unbanip_broadcast: "%prefix%&a❱ %sender% removed IP ban from %target% (ID: #%id%)."
+banip_player: "&c✖ Your IP address has been banned.\nReason: %reason%\nAdmin: %sender%"
+
+# ============================================================
+#                      WARNINGS (WARN)
+# ============================================================
+
+not_warned: "%prefix%&cPlayer %target% has no active warnings."
+warn_broadcast: "%prefix%&6❱ %sender% warned %target% for %duration%. &cReason: %reason% (ID: #%id%)"
+unwarn_broadcast: "%prefix%&a❱ %sender% removed warning #%id% from %target%."
+warn_player: "&c✖ You have been warned by %sender% for %duration%. Reason: %reason%\nServer: %server%\nID: #%id%"
+unwarn_notify: "%prefix%&aWarning #%id% has been removed by %issuer%."
+
+# Automatic punishment
+auto_punishment_reason: "Automatic punishment for %count% warnings"
+console_name: "Console"
+
+# ============================================================
+#                      JAIL (JAIL / UNJAIL)
+# ============================================================
+
+already_jailed: "&cPlayer %target% is already jailed."
+jail_no_world: "&cError: jail world does not exist!"
+jail_already_jailed_self: "&cYou are already in jail!"
+jail_teleport_blocked: "&cYou cannot teleport from jail!"
+jail_world_block_break: "&cYou cannot break blocks in the jail world!"
+jail_world_block_place: "&cYou cannot place blocks in the jail world!"
+jail_world_inventory: "&cYou cannot open inventories in the jail world!"
+jail_world_command: "&cYou cannot use commands in the jail world!"
+jail_world_interact: "&cYou cannot interact with objects in jail!"
+jail_food_fill: "&cYour hunger does not decrease in jail."
+jail_spawn_failed: "&cFailed to send player to jail!"
+not_jailed: "%prefix%&cPlayer %target% is not jailed."
+jail_expired: "&aYour jail time has expired."
+jail_teleport_out: "&cYou were teleported out of the jail world because you have no active punishment."
+
+jail_broadcast: "%prefix%&6❱ %sender% jailed %target% for %duration%. &cReason: %reason% (ID: #%id%)"
+unjail_broadcast: "%prefix%&a❱ %sender% released %target% from jail (ID: #%id%)."
+jail_success_sender: "&aPlayer %target% has been jailed for %duration%. ID: #%id%"
+jail_auto_start: "&cYou have been jailed for %duration%.\nReason: &e%reason%"
+jail_notify: "&c✖ You have been jailed by %sender%.\n&7Reason: %reason%\n&7Server: %server%\n&7Duration: %duration%\n&7ID: #%id%"
+jail_no_commands: "%prefix%&cYou are in jail and cannot use commands."
+jail_no_chat: "&c✖ You are in jail and cannot chat.\nJailed by: %sender%\nReason: %reason%\nServer: %server%\nDuration: %duration%"
+unjail_notify: "%prefix%&aYou have been released from jail by %issuer%."
+cannot_unjail_others: "&cYou cannot release other players from jail."
+
+# ============================================================
+#                      HISTORY (HISTORY)
+# ============================================================
+
+history_usage: "%prefix%&cUsage: /history <player>"
+history.header: "%prefix%&6=== Punishment history of %target% ==="
+history.entry: " &7- &f#%id% &8| &f%date% &8| &c%type% &8| &7Status: %status% &8| &7Server: %server% &8| &7Issuer: %issuer% &8| &7Reason: %reason%"
+history.footer: "&7=== Total entries: %total% ==="
+
+# ============================================================
+#                      INSPECT (INSPECT)
+# ============================================================
+
+inspect_usage: "%prefix%&cUsage: /inspect <player>"
+inspect.header: "%prefix%&6=== Active punishments of %target% ==="
+inspect.entry_ban: " &7- &cBan #%id% &8| &7Server: %server% &8| &7Reason: %reason% &8| &7Until: %expires%"
+inspect.entry_mute: " &7- &eMute #%id% &8| &7Server: %server% &8| &7Reason: %reason% &8| &7Until: %expires%"
+inspect.entry_permanent: " &7- &c%type% #%id% &8| &7Server: %server% &8| &7Reason: %reason% &8| &cPermanent"
+inspect.entry_jail: " &7- &6Jail #%id% &8| &7Server: %server% &8| &7Reason: %reason% &8| &7Until: %expires%"
+inspect.none: "&aPlayer %target% has no active punishments."
+inspect.footer: "&7=== Use /droppunish <ID> to delete ==="
+
+# ============================================================
+#                      PUNISHMENT LIST (PUNLIST)
+# ============================================================
+
+punlist.header: "%prefix%&6=== All punishments (page %page%/%total_pages%) ==="
+punlist.entry: " &7- &f#%id% &8| &c%type% &8| &c%player% &8| &7Status: %status% &8| &7Server: %server% &8| &7Issuer: %issuer% &8| &f%date% &8| &e%duration% &8| &7%reason%"
+punlist.footer: "&7=== Use /punlist <page> to navigate ==="
+punlist.no_punishments: "%prefix%&cNo punishments found."
+
+# ============================================================
+#                      PRESET LIST (PRESETLIST)
+# ============================================================
+
+presetlist.header: "%prefix%&6=== Available punishment presets ==="
+presetlist.entry: " &7- &f%name% &8| &c%type% &8| &7%reason% &8| &e%duration%"
+presetlist.footer: "&7=== Use +presetname in command ==="
+presetlist.no_presets: "%prefix%&cNo presets found."
+
+# ============================================================
+#                      WARNING LIST (WARNLIST)
+# ============================================================
+
+usage_warnlist: "%prefix%&cUsage: /warnlist <player>"
+warnlist.header: "%prefix%&6=== Warnings of %target% ==="
+warnlist.entry: " &7- &f#%id% &8| &f%date% &8| &7Issuer: %issuer% &8| &7Reason: %reason% &8| &e%duration% &8| &7Status: %status%"
+warnlist.footer: "&7=== Total entries: %total% ==="
+warnlist_empty: "%prefix%&cPlayer %target% has no warnings."
+
+# ============================================================
+#                      EXTRA COMMANDS
+# ============================================================
+
+# GETUUID
+getuuid_usage: "%prefix%&cUsage: /getuuid <player>"
+getuuid_result: "%prefix%&aUUID of %target%: %uuid%"
+
+# PLAYERINFO
+playerinfo_usage: "%prefix%&cUsage: /playerinfo <player>"
+playerinfo_header: "%prefix%&6=== Information about %target% ==="
+playerinfo_ip: " &7- IP address: &f%ip%"
+playerinfo_location: " &7- Geolocation: &f%location%"
+playerinfo_no_active: " &7- No active punishments."
+playerinfo_active_header: " &7- Active punishments:"
+playerinfo_active_entry: "   &7- #%id% (%type%): &f%reason% &8(until %expires%)"
+
+# PSTAT
+pstat_usage: "%prefix%&cUsage: /pstat <player>"
+pstat_result: "%prefix%&aStatistics for %target%: &fBans: %bans%, Mutes: %mutes%, Kicks: %kicks%, IP bans: %ipbans%"
+
+# GEOIP
+usage_geoip: "%prefix%&cUsage: /geoip <player|IP>"
+geoip_not_ready: "%prefix%&cGeoIP database is not ready yet. Please try again later."
+geoip_not_found: "%prefix%&cCould not determine location for %target%"
+geoip_result: "%prefix%&aLocation of %target% (%ip%): %location%"
+geoip_block_message: "{prefix}&cAccess from your country (%country%) is blocked."
+
+# ALTREASON / ALTDURATION
+altreason_usage: "%prefix%&cUsage: /altreason <ID> <new reason>"
+
+# TWACCS / BANTWACCS
+usage_twaccs: "%prefix%&cUsage: /twaccs <player>"
+usage_bantwaccs: "%prefix%&cUsage: /bantwaccs <player> <reason>"
+twaccs_no_alts: "%prefix%&cPlayer %target% has no alt accounts."
+twaccs_result: "%prefix%&aAlt accounts for %target%: %alts%"
+bantwaccs_broadcast: "%prefix%&c❱ %sender% banned all accounts of %target% (%alts%) for %reason%"
+
+# DBAN
+usage_dban: "%prefix%&cUsage: /dban reload"
+
+# UNMUTE / UNBAN / UNJAIL / UNWARN
+cannot_unban_others: "{prefix}&cYou can only unban yourself."
+cannot_unmute_others: "{prefix}&cYou can only unmute yourself."
+cannot_unwarn_others: "&cYou cannot remove warnings from other players."
+
+# ============================================================
+#                      COMMAND USAGE MESSAGES
+# ============================================================
+
+usage_ban: "%prefix%&cUsage: /ban <player> <reason> [-s]"
+usage_tempban: "%prefix%&cUsage: /tempban <player> <time> <reason> [-s]"
+usage_unban: "%prefix%&cUsage: /unban <player>"
+usage_mute: "%prefix%&cUsage: /mute <player> <reason> [-s]"
+usage_tempmute: "%prefix%&cUsage: /tempmute <player> <time> <reason> [-s]"
+usage_unmute: "%prefix%&cUsage: /unmute <player>"
+usage_kick: "%prefix%&cUsage: /kick <player> <reason> [-s]"
+usage_banip: "%prefix%&cUsage: /banip <player|ip> [reason] [-s]"
+usage_unbanip: "%prefix%&cUsage: /unbanip <player|ip>"
+usage_jail: "%prefix%&cUsage: /jail <player> [time] <reason> [-s] [server:]"
+usage_unjail: "%prefix%&cUsage: /unjail <player|#ID>"
+usage_warn: "%prefix%&cUsage: /warn <player> [time] <reason> [-s] [server:]"
+usage_unwarn: "%prefix%&cUsage: /unwarn <player|#ID>"

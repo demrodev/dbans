@@ -1,0 +1,50 @@
+#Presets are helpers for your moderators, so that you don't have to enter the time completely, you can specify the reason for the punishment as +preset_name.
+#duration - sets the duration of the punishment, if duration is not specified, it means that the punishment is permanent.
+#reason - sets the reason for the punishment. type - sets the type of punishment, either mute or ban.
+#IMPORTANT! If the punishment does not have a duration set, you can only use the preset with the permanent punishment command /ban & /mute.
+#If the duration is set, you can use it with temporary punishments such as /tempban & /tempmute
+#You may add more!
+presets:
+  hacking:
+    reason: "Использование читов/нелегального ПО"
+    duration: "12h"
+    type: "tempban"
+    permission: "dbans.preset.hacking"
+  spam:
+    reason: "Спам в чате"
+    duration: "1h"
+    type: "tempmute"
+    permission: "dbans.preset.spam"
+  toxic:
+    reason: "Токсичное поведение"
+    duration: "30m"
+    type: "tempmute"
+    permission: "dbans.preset.toxic"
+  advertising:
+    reason: "Реклама сторонних ресурсов"
+    duration: "7d"
+    type: "tempban"
+    permission: "dbans.preset.advertising"
+  caps:
+    reason: "Злоупотребление Caps Lock"
+    duration: "15m"
+    type: "tempmute"
+    permission: "dbans.preset.caps"
+  perm_ban:
+    reason: "Грубое нарушение правил"
+    type: "ban"
+    permission: "dbans.preset.perm_ban"
+  perm_mute:
+    reason: "Перманентный мут за нарушения"
+    type: "mute"
+    permission: "dbans.preset.perm_mute"
+  jail_1h:
+    reason: "Нарушение правил"
+    duration: "1h"
+    type: "jail"
+    permission: "dbans.preset.jail_1h"
+  warn_spam:
+    reason: "Спам в чате"
+    duration: "30m"
+    type: "warn"
+    permission: "dbans.preset.warn_spam"

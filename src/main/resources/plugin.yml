@@ -1,0 +1,345 @@
+name: DBans
+version: '${version}'
+main: me.demro.dBans.DBans
+api-version: '1.21'
+load: POSTWORLD
+authors: [DemRoDev]
+depend: [LuckPerms]
+softdepend: [PlaceholderAPI, Citizens]
+
+commands:
+  warn:
+    description: Warn a player
+    usage: /warn <player> [time] <reason> [-s] [server:name]
+    permission: dbans.warn
+  unwarn:
+    description: Remove a warning from a player
+    usage: /unwarn <player|#ID>
+    permission: dbans.unwarn
+  twaccs:
+    description: Find alt accounts of a player
+    usage: /twaccs <player>
+    permission: dbans.twaccs
+  bantwaccs:
+    description: Ban all alt accounts of a player
+    usage: /bantwaccs <player> <reason>
+    permission: dbans.bantwaccs
+  ban:
+    description: Ban a player permanently
+    usage: /ban <player> <reason> [-s]
+    permission: dbans.ban
+  tempban:
+    description: Temporarily ban a player
+    usage: /tempban <player> <time> <reason> [-s]
+    permission: dbans.tempban
+  unban:
+    description: Unban a player
+    usage: /unban <player> [#ID]
+    permission: dbans.unban
+  mute:
+    description: Mute a player permanently
+    usage: /mute <player> <reason> [-s]
+    permission: dbans.mute
+  tempmute:
+    description: Temporarily mute a player
+    usage: /tempmute <player> <time> <reason> [-s]
+    permission: dbans.tempmute
+  unmute:
+    description: Unmute a player
+    usage: /unmute <player> [#ID]
+    permission: dbans.unmute
+  kick:
+    description: Kick a player from the server
+    usage: /kick <player> <reason> [-s]
+    permission: dbans.kick
+  banip:
+    description: Ban an IP address or mask (e.g., 192.168.0.*)
+    usage: /banip <player|ip|mask> [reason] [-s]
+    permission: dbans.banip
+  history:
+    description: View player punishment history
+    usage: /history <player>
+    permission: dbans.history
+  droppunish:
+    description: Delete a punishment from database
+    usage: /droppunish <id>
+    permission: dbans.droppunish
+  inspect:
+    description: Check active punishments of a player
+    usage: /inspect <player>
+    permission: dbans.inspect
+  altreason:
+    description: Change reason of a punishment
+    usage: /altreason <id> <new reason>
+    permission: dbans.altreason
+  altduration:
+    description: Change duration of a temporary punishment
+    usage: /altduration <id> <new duration>
+    permission: dbans.altduration
+  getuuid:
+    description: Get UUID of a player (even offline)
+    usage: /getuuid <player>
+    permission: dbans.getuuid
+  playerinfo:
+    description: Show player info (IP, geo, active punishments)
+    usage: /playerinfo <player>
+    permission: dbans.playerinfo
+  pstat:
+    description: Show punishment statistics of a player
+    usage: /pstat <player>
+    permission: dbans.pstat
+  punlist:
+    description: List all punishments
+    usage: /punlist [page]
+    permission: dbans.punlist
+  presetlist:
+    description: List available punishment presets
+    usage: /presetlist
+    permission: dbans.presetlist
+  dban:
+    description: Reload plugin configuration
+    usage: /dban reload
+    permission: dbans.dban.reload
+    aliases: [dbans]
+  unbanip:
+    description: Unban an IP address or mask
+    usage: /unbanip <player|ip|mask> [#ID]
+    permission: dbans.unbanip
+  geoip:
+    description: Get country and city by IP or player name
+    usage: /geoip <player|IP>
+    permission: dbans.geoip
+  jail:
+    description: Put a player in jail
+    usage: /jail <player> [time] <reason> [-s] [server:name]
+    permission: dbans.jail
+  unjail:
+    description: Release a player from jail
+    usage: /unjail <player|#ID>
+    permission: dbans.unjail
+  warnlist:
+    description: List all warnings of a player
+    usage: /warnlist <player>
+    permission: dbans.warnlist
+
+permissions:
+  dbans.warn:
+    default: op
+  dbans.unwarn:
+    default: op
+  dbans.twaccs:
+    default: op
+  dbans.bantwaccs:
+    default: op
+  dbans.jail:
+    default: op
+  dbans.unjail:
+    default: op
+  dbans.geoip:
+    default: op
+  dbans.unbanip:
+    default: op
+  dbans.dban.reload:
+    default: op
+  dbans.ban:
+    default: op
+  dbans.tempban:
+    default: op
+  dbans.unban:
+    default: op
+  dbans.mute:
+    default: op
+  dbans.tempmute:
+    default: op
+  dbans.unmute:
+    default: op
+  dbans.kick:
+    default: op
+  dbans.banip:
+    default: op
+  dbans.history:
+    default: op
+  dbans.droppunish:
+    default: op
+  dbans.inspect:
+    default: op
+  dbans.altreason:
+    default: op
+  dbans.altduration:
+    default: op
+  dbans.getuuid:
+    default: op
+  dbans.playerinfo:
+    default: op
+  dbans.pstat:
+    default: op
+  dbans.punlist:
+    default: op
+  dbans.presetlist:
+    default: op
+  dbans.warnlist:
+    default: op
+
+  # Own unban/unmute permissions
+  dbans.unban.own:
+    default: op
+  dbans.unmute.own:
+    default: op
+  dbans.unwarn.own:
+    default: op
+  dbans.unjail.own:
+    default: op
+
+  # Cooldown bypass permissions
+  dbans.cooldown.bypass:
+    description: Bypass all command cooldowns
+    default: op
+  dbans.cooldown.ban:
+    description: Bypass cooldown for /ban
+    default: op
+  dbans.cooldown.tempban:
+    description: Bypass cooldown for /tempban
+    default: op
+  dbans.cooldown.mute:
+    description: Bypass cooldown for /mute
+    default: op
+  dbans.cooldown.tempmute:
+    description: Bypass cooldown for /tempmute
+    default: op
+  dbans.cooldown.kick:
+    description: Bypass cooldown for /kick
+    default: op
+  dbans.cooldown.banip:
+    description: Bypass cooldown for /banip
+    default: op
+  dbans.cooldown.warn:
+    description: Bypass cooldown for /warn
+    default: op
+  dbans.cooldown.jail:
+    description: Bypass cooldown for /jail
+    default: op
+
+  # Duration bypass permissions
+  dbans.duration.bypass:
+    description: Bypass max duration limits for all punishments
+    default: op
+  dbans.duration.ban:
+    description: Bypass max duration for /ban
+    default: op
+  dbans.duration.tempban:
+    description: Bypass max duration for /tempban
+    default: op
+  dbans.duration.mute:
+    description: Bypass max duration for /mute
+    default: op
+  dbans.duration.tempmute:
+    description: Bypass max duration for /tempmute
+    default: op
+  dbans.duration.warn:
+    description: Bypass max duration for /warn
+    default: op
+  dbans.duration.jail:
+    description: Bypass max duration for /jail
+    default: op
+
+  # Priority bypass
+  dbans.priority.bypass:
+    description: Bypass hierarchy restrictions
+    default: op
+
+  # Silent mode permissions
+  dbans.silent.bypass:
+    description: Use -s in all punishment commands
+    default: op
+  dbans.silent.ban:
+    description: Use -s in /ban
+    default: op
+  dbans.silent.tempban:
+    description: Use -s in /tempban
+    default: op
+  dbans.silent.mute:
+    description: Use -s in /mute
+    default: op
+  dbans.silent.tempmute:
+    description: Use -s in /tempmute
+    default: op
+  dbans.silent.kick:
+    description: Use -s in /kick
+    default: op
+  dbans.silent.banip:
+    description: Use -s in /banip
+    default: op
+  dbans.silent.warn:
+    default: op
+    description: Use -s in /warn
+  dbans.silent.jail:
+    default: op
+    description: Use -s in /jail
+
+  # Immune permissions (group-based removed, now only these permission-based)
+  dbans.ban.immune:
+    default: false
+  dbans.tempban.immune:
+    default: false
+  dbans.mute.immune:
+    default: false
+  dbans.tempmute.immune:
+    default: false
+  dbans.kick.immune:
+    default: false
+  dbans.banip.immune:
+    default: false
+  dbans.warn.immune:
+    default: op
+  dbans.jail.immune:
+    default: op
+
+  #Server usage perms
+  dbans.server.bypass:
+    default: op
+  dbans.server.ban:
+    default: op
+  dbans.server.banip:
+    default: op
+  dbans.server.tempban:
+    default: op
+  dbans.server.mute:
+    default: op
+  dbans.server.tempmute:
+    default: op
+  dbans.server.kick:
+    default: op
+  dbans.server.jail:
+    default: op
+  dbans.server.warn:
+    default: op
+
+  #Allow to join to Jail world
+  dbans.jail.bypass:
+    default: op
+
+  #Notify broadcast permissions
+  dbans.notify.*:
+    default: op
+  dbans.notify.ban:
+    default: op
+  dbans.notify.mute:
+    default: op
+  dbans.notify.kick:
+    default: op
+  dbans.notify.ipban:
+    default: op
+  dbans.notify.jail:
+    default: op
+  dbans.notify.warning:
+    default: op
+  dbans.notify.unban:
+    default: op
+  dbans.notify.unmute:
+    default: op
+  dbans.notify.unbanip:
+    default: op
+  dbans.notify.unjail:
+    default: op
+  dbans.notify.unwarn:
+    default: op

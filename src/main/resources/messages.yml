@@ -1,0 +1,258 @@
+# ============================================================
+#                   ОБЩИЕ СООБЩЕНИЯ
+# ============================================================
+
+# Статусы для истории и списка наказаний
+status_active: "&#a3e4d7Активно"
+status_expired: "&#f5b042Истекло"
+status_pardoned: "&#e67e22Снято"
+
+# Ошибки и информационные сообщения
+no_permission: "%prefix%&#e67e22✖ У вас нет прав на использование этой команды."
+player_not_found: "%prefix%&#e67e22✖ Игрок &#f5b042%target% &#e67e22не найден."
+invalid_time: "%prefix%&#e67e22✖ Неверный формат времени. Пример: &#f5b0421h30m &#e67e22(1 час 30 минут), &#f5b0422d &#e67e22(2 дня), &#f5b04230m &#e67e22(30 минут)."
+limit_exceed: "%prefix%&#e67e22✖ Вы не можете выдать наказание дольше &#f5b042%max% &#e67e22(ваша группа: &#f5b042%group%&#e67e22)."
+target_immune_group: "%prefix%&#e67e22✖ Игрок &#f5b042%target% &#e67e22принадлежит группе &#f5b042%group%&#e67e22, которую нельзя наказывать."
+target_immune_permission: "%prefix%&#e67e22✖ Игрок &#f5b042%target% &#e67e22имеет иммунитет к этому типу наказаний."
+punishment_not_found: "%prefix%&#e67e22✖ Наказание с ID &#f5b042%id% &#e67e22не найдено."
+punishment_deleted: "%prefix%&#a3e4d7✓ Наказание &#f5b042#%id% &#a3e4d7успешно удалено из базы данных."
+reason_updated: "%prefix%&#a3e4d7✓ Причина наказания &#f5b042#%id% &#a3e4d7изменена на: &#f5b042%reason%"
+no_history: "%prefix%&#e67e22✖ У игрока &#f5b042%target% &#e67e22нет истории наказаний."
+reload_success: "%prefix%&#a3e4d7✓ Конфигурация и пресеты успешно перезагружены."
+cannot_punish_self: "%prefix%&#e67e22✖ Вы не можете наказать самого себя."
+preset_not_found: "%prefix%&#e67e22✖ Пресет не найден: &#f5b042%name%"
+preset_wrong_type: "%prefix%&#e67e22✖ Пресет &#f5b042%preset% &#e67e22нельзя использовать с &#f5b042/%command%"
+preset_has_duration: "%prefix%&#e67e22✖ Пресет &#f5b042%preset% &#e67e22имеет длительность. Используйте &#f5b042/%command%"
+preset_no_duration: "%prefix%&#e67e22✖ Пресет &#f5b042%preset% &#e67e22не имеет длительности. Используйте &#f5b042/%command%"
+cannot_punish_higher_priority: "%prefix%&#e67e22✖ Вы не можете наказать игрока &#f5b042%target% &#e67e22с более высоким приоритетом (ваш: &#f5b042%issuer_priority%&#e67e22, его: &#f5b042%target_priority%&#e67e22)."
+command_on_cooldown: "%prefix%&#e67e22✖ Вы не можете использовать команду &#f5b042/%command% &#e67e22ещё &#f5b042%time% &#e67e22секунд."
+silent_not_allowed: "%prefix%&#e67e22✖ У вас нет прав использовать тихий режим (-s) для команды &#f5b042/%command%"
+server_argument_not_supported: "%prefix%&#e67e22✖ Указание сервера (server:) поддерживается только в режимах sync и sync_static."
+no_server_permission: "%prefix%&#e67e22✖ У вас нет права использовать флаг server: в команде &#f5b042%command%"
+no_preset_permission: "%prefix%&#e67e22✖ У вас нет прав для использования пресета &#f5b042%preset%"
+
+# Сообщения для команд изменения наказания
+altduration_usage: "%prefix%&#f5b042⚙ Использование: /altduration <ID> <длительность> (например 2h, 30m, 7d)"
+cannot_change_duration_permanent: "%prefix%&#e67e22✖ У этого наказания бессрочная длительность, её нельзя изменить."
+duration_updated: "%prefix%&#a3e4d7✓ Длительность наказания &#f5b042#%id% &#a3e4d7изменена на &#f5b042%duration%"
+
+# Удаление наказаний
+droppunish_usage: "%prefix%&#f5b042⚙ Использование: /droppunish <ID>"
+droppunish_all_confirm: "&#e67e22⚠ ВНИМАНИЕ! Вы собираетесь удалить ВСЕ наказания (баны, муты, кики, тюрьмы, варны). Это действие необратимо. Для подтверждения введите: /droppunish all confirm"
+droppunish_all_success: "%prefix%&#a3e4d7✓ Все наказания успешно удалены."
+
+# ============================================================
+#                      БАНЫ (BAN / TEMPBAN)
+# ============================================================
+
+ban_already: "%prefix%&#e67e22✖ Игрок &#f5b042%target% &#e67e22уже забанен."
+not_banned: "%prefix%&#e67e22✖ Игрок &#f5b042%target% &#e67e22не забанен."
+
+# Broadcasts
+ban_broadcast: "%prefix%&#e67e22❱ %sender% забанил %target% навсегда. &6Причина: %reason% {hover:&#a3e4d7ID: #%id%\n&#f5b042Сервер: %server%\n&#e67e22Навсегда}"
+tempban_broadcast: "%prefix%&#e67e22❱ %sender% временно забанил %target% на %duration%. &6Причина: %reason% {hover:&#a3e4d7ID: #%id%\n&#f5b042Сервер: %server%\n&#e67e22До конца: %duration%}"
+unban_broadcast: "%prefix%&#a3e4d7❱ %sender% снял бан с игрока %target% {hover:&#a3e4d7ID: #%id%\n&#f5b042Сервер: %server%\n&#e67e22Бан снят}"
+
+# Сообщения игроку
+ban_player: "&#e67e22✖ Вы были забанены навсегда.\n&#f5b042Причина: %reason%\n&#e67e22Администратор: %sender%\n&#e67e22Сервер: %server%\n&#e67e22ID: #%id%"
+tempban_player: "&#e67e22✖ Вы были забанены на %duration%.\n&#f5b042Причина: %reason%\n&#e67e22Администратор: %sender%\n&#e67e22Сервер: %server%\n&#e67e22ID: #%id%"
+
+# ============================================================
+#                      МУТЫ (MUTE / TEMPMUTE)
+# ============================================================
+
+mute_already: "%prefix%&#e67e22✖ Игрок &#f5b042%target% &#e67e22уже замучен."
+not_muted: "%prefix%&#e67e22✖ Игрок &#f5b042%target% &#e67e22не замучен."
+mute_expired: "&#a3e4d7✓ Ваш мут истёк. Теперь вы можете снова писать в чат."
+tempmute_expired: "&#a3e4d7✓ Ваш временный мут истёк. Теперь вы можете снова писать в чат."
+
+# Broadcasts
+mute_broadcast: "%prefix%&#f5b042❱ %sender% замутил %target% навсегда. &6Причина: %reason% {hover:&#a3e4d7ID: #%id%\n&#f5b042Сервер: %server%\n&#e67e22Навсегда}"
+tempmute_broadcast: "%prefix%&#f5b042❱ %sender% замутил %target% на %duration%. &6Причина: %reason% {hover:&#a3e4d7ID: #%id%\n&#f5b042Сервер: %server%\n&#e67e22До конца: %duration%}"
+unmute_broadcast: "%prefix%&#a3e4d7❱ %sender% снял мут с игрока %target% {hover:&#a3e4d7ID: #%id%\n&#f5b042Сервер: %server%\n&#e67e22Мут снят}"
+
+# Сообщения игроку
+mute_player: "&#e67e22✖ Вы были замучены %sender% навсегда. Причина: %reason%\n&#e67e22Сервер: %server%\n&#e67e22ID: #%id%"
+tempmute_player: "&#e67e22✖ Вы были замучены %sender% на %duration%. Причина: %reason%\n&#e67e22Сервер: %server%\n&#e67e22ID: #%id%"
+
+# Блокировка команд и чата
+muted_command_blocked: "%prefix%&#e67e22✖ Вы замучены и не можете использовать команду /%command%."
+cannot_chat: "&#e67e22✖ Вы замучены %sender% на %duration%. Причина: %reason%. \n&#f5b042Сервер: %server%"
+
+# ============================================================
+#                      КИКИ (KICK)
+# ============================================================
+
+kick_broadcast: "%prefix%&#f5b042❱ %sender% кикнул %target%. &cПричина: %reason% {hover:&#a3e4d7Сервер: %server%\n&#e67e22Кик}"
+kick_player: "&#e67e22✖ Вас кикнули.\n&#f5b042Причина: %reason%\n&#e67e22Администратор: %sender%"
+
+# ============================================================
+#                      IP-БАНЫ (BANIP / UNBANIP)
+# ============================================================
+
+ip_not_found_for_player: "%prefix%&#e67e22✖ Не найден IP-бан для игрока %target%."
+ip_not_banned: "%prefix%&#e67e22✖ IP-адрес %target% не забанен."
+ip_banned_already: "%prefix%&#e67e22✖ IP-адрес игрока %target% уже забанен."
+ip_not_banned_for_player: "%prefix%&#e67e22✖ У игрока %target% нет активного IP-бана."
+ip_unbanned: "%prefix%&#a3e4d7✓ IP-адрес %target% разбанен."
+
+banip_broadcast: "%prefix%&#e67e22❱ %sender% забанил по IP игрока %target% навсегда. &6Причина: %reason% {hover:&#a3e4d7ID: #%id%\n&#f5b042Сервер: %server%}"
+unbanip_broadcast: "%prefix%&#a3e4d7❱ %sender% снял IP-бан с %target% {hover:&#a3e4d7ID: #%id%\n&#f5b042Сервер: %server%}"
+banip_player: "&#e67e22✖ Ваш IP-адрес заблокирован.\n&#f5b042Причина: %reason%\n&#e67e22Администратор: %sender%"
+
+# ============================================================
+#                      ПРЕДУПРЕЖДЕНИЯ (WARN)
+# ============================================================
+
+not_warned: "%prefix%&#e67e22✖ Игрок %target% не имеет активных предупреждений."
+warn_broadcast: "%prefix%&#f5b042❱ %sender% выдал предупреждение %target% на %duration%. &cПричина: %reason% {hover:&#a3e4d7ID: #%id%\n&#f5b042Сервер: %server%\n&#e67e22Предупреждение}"
+unwarn_broadcast: "%prefix%&#a3e4d7❱ %sender% снял предупреждение #%id% с игрока %target% {hover:&#a3e4d7Предупреждение снято}"
+warn_player: "&#e67e22✖ Вы получили предупреждение от %sender% на %duration%. Причина: %reason%\n&#e67e22Сервер: %server%\n&#e67e22ID: #%id%"
+unwarn_notify: "%prefix%&#a3e4d7✓ С вас снято предупреждение #%id% администратором %issuer%."
+
+# Автоматическое наказание
+auto_punishment_reason: "Автоматическое наказание за %count% предупреждений"
+console_name: "Консоль"
+
+# ============================================================
+#                      ТЮРЬМА (JAIL / UNJAIL)
+# ============================================================
+
+already_jailed: "&#e67e22✖ Игрок %target% уже находится в тюрьме."
+jail_no_world: "&#e67e22✖ Ошибка: мир jail не создан!"
+jail_already_jailed_self: "&#e67e22✖ Вы уже находитесь в тюрьме!"
+jail_teleport_blocked: "&#e67e22✖ Вы не можете телепортироваться из тюрьмы!"
+jail_world_block_break: "&#e67e22✖ В мире тюрьмы нельзя ломать блоки!"
+jail_world_block_place: "&#e67e22✖ В мире тюрьмы нельзя ставить блоки!"
+jail_world_inventory: "&#e67e22✖ В мире тюрьмы нельзя открывать инвентарь!"
+jail_world_command: "&#e67e22✖ В мире тюрьмы нельзя использовать команды!"
+jail_world_interact: "&#e67e22✖ Вы не можете взаимодействовать с объектами в тюрьме!"
+jail_food_fill: "&#f5b042⚠ Ваш голод не уменьшается в тюрьме."
+jail_spawn_failed: "&#e67e22✖ Не удалось посадить игрока в тюрьму!"
+not_jailed: "%prefix%&#e67e22✖ Игрок %target% не находится в тюрьме."
+jail_expired: "&#a3e4d7✓ Ваше заключение истекло."
+jail_teleport_out: "&#e67e22✖ Вы были телепортированы из мира тюрьмы, так как у вас нет активного наказания."
+
+jail_broadcast: "%prefix%&#f5b042❱ %sender% посадил %target% в тюрьму на %duration%. &cПричина: %reason% {hover:&#a3e4d7ID: #%id%\n&#f5b042Сервер: %server%\n&#e67e22Тюрьма}"
+unjail_broadcast: "%prefix%&#a3e4d7❱ %sender% освободил %target% из тюрьмы {hover:&#a3e4d7ID: #%id%\n&#f5b042Сервер: %server%\n&#e67e22Освобождён}"
+jail_success_sender: "&#a3e4d7✓ Игрок %target% посажен в тюрьму %duration%. ID: #%id%"
+jail_auto_start: "&#e67e22✖ Вы посажены в тюрьму на %duration%.\n&#f5b042Причина: %reason%"
+jail_notify: "&#e67e22✖ Вы были посажены в тюрьму администратором %sender%.\n&#f5b042Причина: %reason%\n&#f5b042Сервер: %server%\n&#f5b042Срок: %duration%\n&#f5b042ID: #%id%"
+jail_no_commands: "%prefix%&#e67e22✖ Вы находитесь в тюрьме и не можете использовать команды."
+jail_no_chat: "&#e67e22✖ Вы находитесь в тюрьме и не можете писать в чат.\n&#f5b042Посадил: %sender%\n&#f5b042Причина: %reason%\n&#f5b042Сервер: %server%\n&#f5b042Срок: %duration%"
+unjail_notify: "%prefix%&#a3e4d7✓ Администратор %issuer% освободил вас из тюрьмы."
+cannot_unjail_others: "&#e67e22✖ Вы не можете снимать тюремное заключение с других игроков."
+
+# ============================================================
+#                      ИСТОРИЯ (HISTORY)
+# ============================================================
+
+history_usage: "%prefix%&#f5b042⚙ Использование: /history <ник>"
+history.header: "%prefix%&#f5b042📜 === История наказаний игрока %target% ==="
+history.entry: " &#a3e4d7- &f#%id% &8| &f%date% &8| &c%type% &8| &#a3e4d7Статус: %status% &8| &7Сервер: %server% &8| &7Выдал: %issuer% &8| &7Причина: %reason%"
+history.footer: "&#f5b042📜 === Всего записей: %total% ==="
+
+# ============================================================
+#                      ИНСПЕКТ (INSPECT)
+# ============================================================
+
+inspect_usage: "%prefix%&#f5b042⚙ Использование: /inspect <ник>"
+inspect.header: "%prefix%&#f5b042🔍 === Активные наказания игрока %target% ==="
+inspect.entry_ban: " &#a3e4d7- &cБан #%id% &8| &7Сервер: %server% &8| &7Причина: %reason% &8| &7До: %expires%"
+inspect.entry_mute: " &#a3e4d7- &eМут #%id% &8| &7Сервер: %server% &8| &7Причина: %reason% &8| &7До: %expires%"
+inspect.entry_permanent: " &#a3e4d7- &c%type% #%id% &8| &7Сервер: %server% &8| &7Причина: %reason% &8| &cНавсегда"
+inspect.entry_jail: " &#a3e4d7- &6Тюрьма #%id% &8| &7Сервер: %server% &8| &7Причина: %reason% &8| &7До: %expires%"
+inspect.none: "&#a3e4d7✓ У игрока %target% нет активных наказаний."
+inspect.footer: "&#f5b042🔧 Используйте /droppunish <ID> для удаления"
+
+# ============================================================
+#                      СПИСОК НАКАЗАНИЙ (PUNLIST)
+# ============================================================
+
+punlist.header: "%prefix%&#f5b042📋 === Список всех наказаний (страница %page%/%total_pages%) ==="
+punlist.entry: " &#a3e4d7- &f#%id% &8| &c%type% &8| &c%player% &8| &#a3e4d7Статус: %status% &8| &7Сервер: %server% &8| &7Выдал: %issuer% &8| &f%date% &8| &e%duration% &8| &7%reason%"
+punlist.footer: "&#f5b042📋 Используйте /punlist <страница> для навигации"
+punlist.no_punishments: "%prefix%&#e67e22✖ Наказаний не найдено."
+
+# ============================================================
+#                      СПИСОК ПРЕСЕТОВ (PRESETLIST)
+# ============================================================
+
+presetlist.header: "%prefix%&#f5b042🔧 === Доступные пресеты наказаний ==="
+presetlist.entry: " &#a3e4d7- &f%name% &8| &c%type% &8| &7%reason% &8| &e%duration%"
+presetlist.footer: "&#f5b042🔧 Используйте +название в команде"
+presetlist.no_presets: "%prefix%&#e67e22✖ Пресеты не найдены."
+
+# ============================================================
+#                      СПИСОК ВАРНОВ (WARNLIST)
+# ============================================================
+
+usage_warnlist: "%prefix%&#f5b042⚙ Использование: /warnlist <ник>"
+warnlist_header: "%prefix%&#f5b042⚠ === Предупреждения игрока %target% ==="
+warnlist_entry: " &#a3e4d7- &f#%id% &8| &f%date% &8| &7Выдал: %issuer% &8| &7Причина: %reason% &8| &e%duration% &8| &#a3e4d7Статус: %status%"
+warnlist_footer: "&#f5b042⚠ === Всего записей: %total% ==="
+warnlist_empty: "%prefix%&#e67e22✖ У игрока %target% нет предупреждений."
+
+# ============================================================
+#                      ДОПОЛНИТЕЛЬНЫЕ КОМАНДЫ
+# ============================================================
+
+# GETUUID
+getuuid_usage: "%prefix%&#f5b042⚙ Использование: /getuuid <ник>"
+getuuid_result: "%prefix%&#a3e4d7✓ UUID игрока %target%: &f%uuid%"
+
+# PLAYERINFO
+playerinfo_usage: "%prefix%&#f5b042⚙ Использование: /playerinfo <ник>"
+playerinfo_header: "%prefix%&#f5b042🔍 === Информация об игроке %target% ==="
+playerinfo_ip: " &#a3e4d7- IP-адрес: &f%ip%"
+playerinfo_location: " &#a3e4d7- Геолокация: &f%location%"
+playerinfo_no_active: " &#a3e4d7- Активных наказаний нет."
+playerinfo_active_header: " &#a3e4d7- Активные наказания:"
+playerinfo_active_entry: "   &#a3e4d7- #%id% (%type%): &f%reason% &8(до %expires%)"
+
+# PSTAT
+pstat_usage: "%prefix%&#f5b042⚙ Использование: /pstat <ник>"
+pstat_result: "%prefix%&#a3e4d7✓ Статистика игрока %target%: &fБаны: %bans%, Муты: %mutes%, Кики: %kicks%, IP-баны: %ipbans%"
+
+# GEOIP
+usage_geoip: "%prefix%&#f5b042⚙ Использование: /geoip <никнейм|IP>"
+geoip_not_ready: "%prefix%&#e67e22✖ База данных геолокации еще не загружена. Попробуйте позже."
+geoip_not_found: "%prefix%&#e67e22✖ Не удалось определить местоположение для %target%"
+geoip_result: "%prefix%&#a3e4d7✓ Геолокация %target% (%ip%) : &f%location%"
+geoip_block_message: "{prefix}&cДоступ с вашей страны (%country%) запрещён."
+
+# ALTREASON / ALTDURATION
+altreason_usage: "%prefix%&#f5b042⚙ Использование: /altreason <ID> <новая причина>"
+
+# TWACCS / BANTWACCS
+usage_twaccs: "%prefix%&#f5b042⚙ Использование: /twaccs <ник>"
+usage_bantwaccs: "%prefix%&#f5b042⚙ Использование: /bantwaccs <ник> <причина>"
+twaccs_no_alts: "%prefix%&#e67e22✖ У игрока %target% нет альтернативных аккаунтов."
+twaccs_result: "%prefix%&#a3e4d7✓ Альтернативные аккаунты для %target%: &f%alts%"
+bantwaccs_broadcast: "%prefix%&#e67e22❱ %sender% забанил все аккаунты игрока %target% (%alts%) по причине %reason% {hover:&#a3e4d7Массовый бан}"
+
+# DBAN
+usage_dban: "%prefix%&#f5b042⚙ Использование: /dban reload"
+
+# UNMUTE / UNBAN / UNJAIL / UNWARN
+cannot_unban_others: "{prefix}&cВы можете снять бан только с самого себя."
+cannot_unmute_others: "{prefix}&cВы можете снять мут только с самого себя."
+cannot_unwarn_others: "&#e67e22✖ Вы не можете снимать предупреждения с других игроков."
+
+# ============================================================
+#                      ИСПОЛЬЗОВАНИЕ КОМАНД (USAGE)
+# ============================================================
+
+usage_ban: "%prefix%&#f5b042⚙ Использование: /ban <игрок> <причина> [-s]"
+usage_tempban: "%prefix%&#f5b042⚙ Использование: /tempban <игрок> <время> <причина> [-s]"
+usage_unban: "%prefix%&#f5b042⚙ Использование: /unban <игрок>"
+usage_mute: "%prefix%&#f5b042⚙ Использование: /mute <игрок> <причина> [-s]"
+usage_tempmute: "%prefix%&#f5b042⚙ Использование: /tempmute <игрок> <время> <причина> [-s]"
+usage_unmute: "%prefix%&#f5b042⚙ Использование: /unmute <игрок>"
+usage_kick: "%prefix%&#f5b042⚙ Использование: /kick <игрок> <причина> [-s]"
+usage_banip: "%prefix%&#f5b042⚙ Использование: /banip <игрок|ip> [причина] [-s]"
+usage_unbanip: "%prefix%&#f5b042⚙ Использование: /unbanip <игрок|ip>"
+usage_jail: "%prefix%&#f5b042⚙ Использование: /jail <игрок> [время] <причина> [-s] [server:]"
+usage_unjail: "%prefix%&#f5b042⚙ Использование: /unjail <ник|#ID>"
+usage_warn: "%prefix%&#f5b042⚙ Использование: /warn <игрок> [время] <причина> [-s] [server:]"
+usage_unwarn: "%prefix%&#f5b042⚙ Использование: /unwarn <ник|#ID>"
