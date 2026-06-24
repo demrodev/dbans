@@ -1,7 +1,6 @@
 package me.demro.dBans.service;
 
 import me.demro.dBans.DBans;
-import me.demro.dBans.sync.ProxySyncManager;
 import me.demro.dBans.api.adapter.PunishmentAdapter;
 import me.demro.dBans.model.JailPunishment;
 import me.demro.dBans.model.Punishment;
@@ -53,6 +52,7 @@ public class PunishService {
                 p.setServerName(warning.getServerName());
                 plugin.getProxySyncManager().sendPunishmentCreate(p);
             }
+
 
             Player online = Bukkit.getPlayer(targetUuid);
             if (online != null && online.isOnline()) {

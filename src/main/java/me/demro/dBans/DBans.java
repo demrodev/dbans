@@ -113,6 +113,8 @@ public class DBans extends JavaPlugin implements DBansProvider.DBansAPIProvider 
             getLogger().info("ℹ️ Proxy sync disabled (mode=" + mode + ")");
         }
 
+        getLogger().info("Outgoing channel: " + Constants.CHANNEL_NAME + " registered. Incoming channel: " + Constants.CHANNEL_NAME + " registered.");
+
         // Регистрация команд
         getCommand("ban").setExecutor(new BanCommand(this));
         getCommand("tempban").setExecutor(new TempBanCommand(this));

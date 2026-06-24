@@ -38,7 +38,9 @@
                         </goals>
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
-                            <minimizeJar>true</minimizeJar>
+                            <!-- Не минимизируем, чтобы не потерять динамически загружаемые классы -->
+                            <minimizeJar>false</minimizeJar>
+                            <!-- Исключаем только служебные файлы -->
                             <filters>
                                 <filter>
                                     <artifact>*:*</artifact>
@@ -47,12 +49,11 @@
                                         <exclude>META-INF/*.DSA</exclude>
                                         <exclude>META-INF/*.RSA</exclude>
                                         <exclude>META-INF/MANIFEST.MF</exclude>
-                                        <exclude>org/h2/engine/**</exclude>
-                                        <exclude>org/h2/jdbcx/**</exclude>
-                                        <exclude>org/h2/server/**</exclude>
+                                        <!-- Не исключаем пакеты H2 и других библиотек -->
                                     </excludes>
                                 </filter>
                             </filters>
+                            <!-- Перемещения (relocations) -->
                             <relocations>
                                 <relocation>
                                     <pattern>com.zaxxer.hikari</pattern>
@@ -66,7 +67,13 @@
                                     <pattern>org.bstats</pattern>
                                     <shadedPattern>me.demro.dBans.libs.bstats</shadedPattern>
                                 </relocation>
+                                <!-- Добавляем перемещение для Gson, если он используется -->
+                                <relocation>
+                                    <pattern>com.google.gson</pattern>
+                                    <shadedPattern>me.demro.dBans.libs.gson</shadedPattern>
+                                </relocation>
                             </relocations>
+                            <!-- Не ограничиваем артефакты, включаем все compile зависимости -->
                         </configuration>
                     </execution>
                 </executions>

@@ -34,6 +34,12 @@ public class MuteCommand extends BasePunishCommand {
                 sender instanceof Player ? ((Player) sender).getUniqueId() : CONSOLE_UUID,
                 sender.getName(), PunishmentType.MUTE, reason, System.currentTimeMillis(), null, finalServer);
         plugin.getDatabase().savePunishment(mute);
+        // ======== ВСТАВКА ========
+        if (plugin.getProxySyncManager() != null) {
+            plugin.getProxySyncManager().sendPunishmentCreate(mute);
+            plugin.getLogger().info("📤 [Sync] Sent punishment_create for " + mute.getId());
+        }
+        // ==========================
 
         Player online = target.getPlayer();
         if (online != null && finalServer.equals(plugin.getServerName())) {

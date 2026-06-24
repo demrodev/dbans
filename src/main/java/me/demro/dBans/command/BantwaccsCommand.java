@@ -50,6 +50,12 @@ public class BantwaccsCommand implements CommandExecutor {
             Punishment ban = new Punishment(altPlayer.getUniqueId(), alt, issuerUuid, sender.getName(),
                     PunishmentType.BAN, reason, System.currentTimeMillis(), null, plugin.getServerName());
             plugin.getDatabase().savePunishment(ban);
+            // ======== ВСТАВКА ========
+            if (plugin.getProxySyncManager() != null) {
+                plugin.getProxySyncManager().sendPunishmentCreate(ban);
+                plugin.getLogger().info("📤 [Sync] Sent punishment_create for " + ban.getId());
+            }
+            // ==========================
             bannedList.append(alt).append(" (#").append(ban.getId()).append("), ");
             Player online = altPlayer.getPlayer();
             if (online != null) {

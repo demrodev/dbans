@@ -34,6 +34,12 @@ public class BanCommand extends BasePunishCommand {
                 sender instanceof Player ? ((Player) sender).getUniqueId() : CONSOLE_UUID,
                 sender.getName(), PunishmentType.BAN, reason, System.currentTimeMillis(), null, finalServer);
         plugin.getDatabase().savePunishment(ban);
+        // ======== ВСТАВКА ========
+        if (plugin.getProxySyncManager() != null) {
+            plugin.getProxySyncManager().sendPunishmentCreate(ban);
+            plugin.getLogger().info("📤 [Sync] Sent punishment_create for " + ban.getId());
+        }
+        // ==========================
 
         Player online = target.getPlayer();
         if (online != null && finalServer.equals(plugin.getServerName())) {

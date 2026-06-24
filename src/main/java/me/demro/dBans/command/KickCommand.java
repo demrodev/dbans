@@ -39,6 +39,12 @@ public class KickCommand extends BasePunishCommand {
                 sender instanceof Player ? ((Player) sender).getUniqueId() : CONSOLE_UUID,
                 sender.getName(), PunishmentType.KICK, reason, System.currentTimeMillis(), null, finalServer);
         plugin.getDatabase().savePunishment(kick);
+        // ======== ВСТАВКА ========
+        if (plugin.getProxySyncManager() != null) {
+            plugin.getProxySyncManager().sendPunishmentCreate(kick);
+            plugin.getLogger().info("📤 [Sync] Sent punishment_create for " + kick.getId());
+        }
+        // ==========================
 
         Player online = target.getPlayer();
         if (online != null && finalServer.equals(plugin.getServerName())) {

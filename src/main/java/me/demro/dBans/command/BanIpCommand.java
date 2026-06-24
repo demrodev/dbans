@@ -133,6 +133,12 @@ public class BanIpCommand implements CommandExecutor {
                     (sender instanceof Player) ? ((Player) sender).getUniqueId() : UUID.nameUUIDFromBytes("CONSOLE".getBytes()),
                     sender.getName(), PunishmentType.IPBAN, reason, System.currentTimeMillis(), null, finalServer);
             plugin.getDatabase().savePunishment(ipBanPunishment);
+            // ======== ВСТАВКА ========
+            if (plugin.getProxySyncManager() != null) {
+                plugin.getProxySyncManager().sendPunishmentCreate(ipBanPunishment);
+                plugin.getLogger().info("📤 [Sync] Sent punishment_create for " + ipBanPunishment.getId());
+            }
+            // ==========================
         }
 
         if (sender instanceof Player) {

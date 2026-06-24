@@ -34,13 +34,14 @@ public class ProxySyncManager implements PluginMessageListener {
     // ==================== ОТПРАВКА СООБЩЕНИЙ ====================
 
     private void sendMessage(SyncMessage msg) {
-        if (!isSyncEnabled()) return;
-        // Если прокси-плагин не установлен, просто логируем предупреждение (но не отправляем)
-        // (можно проверить наличие канала, но проще отправлять)
+        if (!isSyncEnabled()) {
+            plugin.getLogger().info("⏭️ Sync disabled, not sending " + msg.getType());
+            return;
+        }
         String json = gson.toJson(msg);
         byte[] data = json.getBytes(StandardCharsets.UTF_8);
+        plugin.getLogger().info("📤 [Sync] Sending " + msg.getType() + " | ID: " + msg.getData().get("id") + " | JSON: " + json);
         Bukkit.getServer().sendPluginMessage(plugin, Constants.CHANNEL_NAME, data);
-        plugin.getLogger().info("📤 [Sync] Sent " + msg.getType() + " | ID: " + msg.getData().get("id"));
     }
 
     // Отправка создания наказания (Punishment)

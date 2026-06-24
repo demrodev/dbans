@@ -61,6 +61,12 @@ public class TempMuteCommand extends BasePunishCommand {
                 sender instanceof Player ? ((Player) sender).getUniqueId() : CONSOLE_UUID,
                 sender.getName(), PunishmentType.MUTE, reason, System.currentTimeMillis(), endTime, finalServer);
         plugin.getDatabase().savePunishment(mute);
+        // ======== ВСТАВКА ========
+        if (plugin.getProxySyncManager() != null) {
+            plugin.getProxySyncManager().sendPunishmentCreate(mute);
+            plugin.getLogger().info("📤 [Sync] Sent punishment_create for " + mute.getId());
+        }
+        // ==========================
         plugin.scheduleMuteExpiry(mute);
 
         Player online = target.getPlayer();
