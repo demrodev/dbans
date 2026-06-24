@@ -32,6 +32,7 @@ public class AltDurationCommand implements CommandExecutor {
         String id = args[0];
         String durationStr = args[1];
         Punishment punishment = plugin.getDatabase().getPunishmentById(id);
+
         if (punishment == null) {
             MessageUtil.send(sender, "punishment_not_found", "id", id);
             return true;
@@ -56,6 +57,12 @@ public class AltDurationCommand implements CommandExecutor {
 
         Long oldEnd = punishment.getEndTime();
         plugin.getDatabase().updatePunishmentEndTime(id, newEndTime);
+        if (plugin.getProxySyncManager() != null) {
+            Punishment updated = plugin.getDatabase().getPunishmentById(id);
+            if (updated != null) {
+                plugin.getProxySyncManager().sendPunishmentModify(updated, null, oldEnd);
+            }
+        }
         punishment.setEndTime(newEndTime);
 
         if (newEndTime <= System.currentTimeMillis()) {

@@ -1,6 +1,7 @@
 package me.demro.dBans.service;
 
 import me.demro.dBans.DBans;
+import me.demro.dBans.sync.ProxySyncManager;
 import me.demro.dBans.api.adapter.PunishmentAdapter;
 import me.demro.dBans.model.JailPunishment;
 import me.demro.dBans.model.Punishment;
@@ -35,6 +36,23 @@ public class PunishService {
             Warning warning = new Warning(targetUuid, targetName, issuerUuid, issuerName,
                     reason, System.currentTimeMillis(), endTime, server);
             plugin.getDatabase().saveWarning(warning);
+            // Отправка через прокси для синхронизации
+            if (plugin.getProxySyncManager() != null) {
+                // Преобразуем Warning в Punishment для отправки
+                Punishment p = new Punishment();
+                p.setId(warning.getId());
+                p.setPlayerUuid(warning.getPlayerUuid());
+                p.setPlayerName(warning.getPlayerName());
+                p.setIssuerUuid(warning.getIssuerUuid());
+                p.setIssuerName(warning.getIssuerName());
+                p.setType(PunishmentType.WARNING);
+                p.setReason(warning.getReason());
+                p.setStartTime(warning.getStartTime());
+                p.setEndTime(warning.getEndTime());
+                p.setActive(warning.isActive());
+                p.setServerName(warning.getServerName());
+                plugin.getProxySyncManager().sendPunishmentCreate(p);
+            }
 
             Player online = Bukkit.getPlayer(targetUuid);
             if (online != null && online.isOnline()) {
@@ -146,6 +164,10 @@ public class PunishService {
         Punishment punishment = new Punishment(targetUuid, targetName, issuerUuid, issuerName,
                 type, reason, start, end, server);
         plugin.getDatabase().savePunishment(punishment);
+        // Отправка через прокси для синхронизации
+        if (plugin.getProxySyncManager() != null) {
+            plugin.getProxySyncManager().sendPunishmentCreate(punishment);
+        }
 
         Player online = Bukkit.getPlayer(targetUuid);
         if (online != null && online.isOnline()) {

@@ -59,6 +59,9 @@ public class UnjailCommand extends BaseUnpunishCommand {
         if (jail != null && jail.isActive()) {
             jail.setActive(false);
             plugin.getDatabase().updateJail(jail);
+            if (plugin.getProxySyncManager() != null) {
+                plugin.getProxySyncManager().sendPunishmentRevoke(jail);
+            }
             Player online = Bukkit.getPlayer(jail.getPlayerUuid());
             if (online != null && online.isOnline()) {
                 plugin.getJailManager().releaseFromJail(online, jail);

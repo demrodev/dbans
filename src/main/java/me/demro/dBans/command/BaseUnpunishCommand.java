@@ -158,10 +158,14 @@ public abstract class BaseUnpunishCommand implements CommandExecutor {
             removeIpBan(active);
         }
         pardon(active, sender);
+        if (plugin.getProxySyncManager() != null && active != null) {
+            plugin.getProxySyncManager().sendPunishmentRevoke(active);
+        }
         MessageUtil.broadcast(getBroadcastPermission(), getBroadcastKey(),
                 "sender", sender.getName(),
                 "target", target.getName(),
                 "id", active.getId());
         return true;
+
     }
 }

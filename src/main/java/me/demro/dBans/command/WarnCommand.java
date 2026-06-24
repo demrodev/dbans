@@ -56,6 +56,9 @@ public class WarnCommand extends BasePunishCommand {
                 sender instanceof Player ? ((Player) sender).getUniqueId() : CONSOLE_UUID,
                 sender.getName(), reason, System.currentTimeMillis(), endTime, finalServer);
         plugin.getDatabase().saveWarning(warning);
+        if (plugin.getProxySyncManager() != null) {
+            plugin.getProxySyncManager().sendPunishmentCreate(warning);
+        }
 
         Player online = target.getPlayer();
         if (online != null && finalServer.equals(plugin.getServerName())) {

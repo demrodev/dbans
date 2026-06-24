@@ -37,6 +37,12 @@ public class AltReasonCommand implements CommandExecutor {
 
         String oldReason = punishment.getReason();
         plugin.getDatabase().updatePunishmentReason(id, newReason);
+        if (plugin.getProxySyncManager() != null) {
+            Punishment updated = plugin.getDatabase().getPunishmentById(id);
+            if (updated != null) {
+                plugin.getProxySyncManager().sendPunishmentModify(updated, oldReason, null);
+            }
+        }
         MessageUtil.send(sender, "reason_updated", "id", id, "reason", newReason);
 
         try {

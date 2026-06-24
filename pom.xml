@@ -94,15 +94,21 @@
             <url>https://maven.citizensnpcs.co/repo</url>
         </repository>
         <repository>
-            <id>nexus</id>
-            <url>http://85.209.135.51:8081/repository/maven-releases/</url>
+            <id>demro-repo</id>
+            <url>https://repo.demro.space/repository/demro-repo/</url>
         </repository>
+
     </repositories>
 
     <dependencies>
         <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
+        </dependency>
+        <dependency>
             <groupId>me.demro.dlibs</groupId>
-            <artifactId>dlibs-api</artifactId>
+            <artifactId>dbans-api</artifactId>
             <version>1.0.0</version>
         </dependency>
         <dependency>

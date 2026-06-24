@@ -59,6 +59,9 @@ public class UnwarnCommand extends BaseUnpunishCommand {
         if (warning != null && warning.isActive()) {
             warning.setActive(false);
             plugin.getDatabase().updateWarning(warning);
+            if (plugin.getProxySyncManager() != null) {
+                plugin.getProxySyncManager().sendPunishmentRevoke(warning);
+            }
             Player online = Bukkit.getPlayer(warning.getPlayerUuid());
             if (online != null && online.isOnline()) {
                 MessageUtil.send(online, "unwarn_notify", "issuer", sender.getName(), "id", warning.getId());

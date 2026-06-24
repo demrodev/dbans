@@ -3,6 +3,7 @@ package me.demro.dBans.util;
 import me.demro.dBans.DBans;
 import me.demro.dBans.model.JailPunishment;
 import me.demro.dBans.model.Punishment;
+import me.demro.dBans.model.PunishmentType;
 import org.bukkit.*;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
@@ -156,6 +157,24 @@ public class JailManager {
         jail.setPreviousLocation(previousLocation);
         jail.setJailLocation(jailLoc);
         plugin.getDatabase().saveJail(jail);
+        if (plugin.getProxySyncManager() != null) {
+            plugin.getProxySyncManager().sendPunishmentCreate(jail);
+        }
+        if (plugin.getProxySyncManager() != null) {
+            Punishment p = new Punishment();
+            p.setId(jail.getId());
+            p.setPlayerUuid(jail.getPlayerUuid());
+            p.setPlayerName(jail.getPlayerName());
+            p.setIssuerUuid(jail.getIssuerUuid());
+            p.setIssuerName(jail.getIssuerName());
+            p.setType(PunishmentType.JAIL);
+            p.setReason(jail.getReason());
+            p.setStartTime(jail.getStartTime());
+            p.setEndTime(jail.getEndTime());
+            p.setActive(jail.isActive());
+            p.setServerName(jail.getServerName());
+            plugin.getProxySyncManager().sendPunishmentCreate(p);
+        }
         activeJailCache.put(player.getUniqueId(), jail);
 
         teleportAllowed.add(player.getUniqueId());

@@ -9,6 +9,8 @@ import me.demro.dBans.listener.*;
 import me.demro.dBans.model.Punishment;
 import me.demro.dBans.model.PunishmentType;
 import me.demro.dBans.placeholder.DBansExpansion;
+import me.demro.dBans.sync.Constants;
+import me.demro.dBans.sync.ProxySyncManager;
 import me.demro.dBans.util.*;
 import me.demro.dBans.util.geo.GeoIpManager;
 import me.demro.dlibs.api.DBansAPI;
@@ -33,6 +35,7 @@ public class DBans extends JavaPlugin implements DBansProvider.DBansAPIProvider 
     private LuckPermsHook luckPermsHook;
     private PresetManager presetManager;
     private SelfPunishChecker selfPunishChecker;
+    private ProxySyncManager proxySyncManager;
     private GeoIpManager geoIpManager;
     private LimitsManager limitsManager;
     private final Map<String, BukkitTask> muteExpiryTasks = new HashMap<>();
@@ -101,8 +104,13 @@ public class DBans extends JavaPlugin implements DBansProvider.DBansAPIProvider 
         this.api = new DBansAPIImpl(this);
         getLogger().info("DBans API initialized and ready");
 
-        if ("sync".equalsIgnoreCase(mode) || "sync_static".equalsIgnoreCase(mode)) {
-            punishmentSyncManager = new PunishmentSyncManager(this);
+        if (mode.equalsIgnoreCase("sync") || mode.equalsIgnoreCase("sync_static")) {
+            proxySyncManager = new ProxySyncManager(this);
+            getServer().getMessenger().registerOutgoingPluginChannel(this, Constants.CHANNEL_NAME);
+            getServer().getMessenger().registerIncomingPluginChannel(this, Constants.CHANNEL_NAME, proxySyncManager);
+            getLogger().info("✅ Proxy sync manager registered.");
+        } else {
+            getLogger().info("ℹ️ Proxy sync disabled (mode=" + mode + ")");
         }
 
         // Регистрация команд
@@ -165,6 +173,11 @@ public class DBans extends JavaPlugin implements DBansProvider.DBansAPIProvider 
         muteExpiryTasks.clear();
         if (database != null) database.close();
         getLogger().info("DBans disabled");
+        if (proxySyncManager != null) {
+            getServer().getMessenger().unregisterOutgoingPluginChannel(this, Constants.CHANNEL_NAME);
+            getServer().getMessenger().unregisterIncomingPluginChannel(this, Constants.CHANNEL_NAME, proxySyncManager);
+            proxySyncManager = null;
+        }
     }
 
     // Геттеры
@@ -173,6 +186,7 @@ public class DBans extends JavaPlugin implements DBansProvider.DBansAPIProvider 
     public LuckPermsHook getLuckPermsHook() { return luckPermsHook; }
     public PresetManager getPresetManager() { return presetManager; }
     public SelfPunishChecker getSelfPunishChecker() { return selfPunishChecker; }
+    public ProxySyncManager getProxySyncManager() { return proxySyncManager; }
     public GeoIpManager getGeoIpManager() { return geoIpManager; }
     public LimitsManager getLimitsManager() { return limitsManager; }
     public String getServerName() { return getConfig().getString("server_name", "unknown"); }
@@ -199,6 +213,9 @@ public class DBans extends JavaPlugin implements DBansProvider.DBansAPIProvider 
         if (delay <= 0) {
             mute.setActive(false);
             database.updatePunishment(mute);
+            if (proxySyncManager != null) {
+                proxySyncManager.sendPunishmentExpire(mute);
+            }
             Player p = Bukkit.getPlayer(mute.getPlayerUuid());
             if (p != null && p.isOnline()) {
                 String rawMsg = MessageUtil.getRawMessage("tempmute_expired");
