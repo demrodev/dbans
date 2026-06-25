@@ -57,20 +57,20 @@
                             <relocations>
                                 <relocation>
                                     <pattern>com.zaxxer.hikari</pattern>
-                                    <shadedPattern>me.demro.dBans.libs.hikari</shadedPattern>
+                                    <shadedPattern>me.demro.dbans.libs.hikari</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>com.maxmind</pattern>
-                                    <shadedPattern>me.demro.dBans.libs.maxmind</shadedPattern>
+                                    <shadedPattern>me.demro.dbans.libs.maxmind</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>org.bstats</pattern>
-                                    <shadedPattern>me.demro.dBans.libs.bstats</shadedPattern>
+                                    <shadedPattern>me.demro.dbans.libs.bstats</shadedPattern>
                                 </relocation>
                                 <!-- Добавляем перемещение для Gson, если он используется -->
                                 <relocation>
                                     <pattern>com.google.gson</pattern>
-                                    <shadedPattern>me.demro.dBans.libs.gson</shadedPattern>
+                                    <shadedPattern>me.demro.dbans.libs.gson</shadedPattern>
                                 </relocation>
                             </relocations>
                             <!-- Не ограничиваем артефакты, включаем все compile зависимости -->

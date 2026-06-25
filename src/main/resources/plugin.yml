@@ -1,6 +1,6 @@
 name: DBans
 version: '${version}'
-main: me.demro.dBans.DBans
+main: me.demro.dbans.DBans
 api-version: '1.21'
 load: POSTWORLD
 authors: [DemRoDev]
