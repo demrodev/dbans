@@ -28,6 +28,7 @@ public abstract class BasePunishCommand implements CommandExecutor {
     protected BasePunishCommand(DBans plugin) {
         this.plugin = plugin;
     }
+
     protected abstract PunishmentType getType();          // тип наказания (BAN, MUTE, KICK, JAIL, WARNING)
     protected abstract String getPermission();           // базовое разрешение (punishment.ban и т.п.)
     protected abstract boolean isPermanent();             // является ли наказание перманентным
@@ -80,6 +81,7 @@ public abstract class BasePunishCommand implements CommandExecutor {
         String reason;
         Long duration = null;
 
+        // Обработка пресетов
         if (cleanArgs[cleanArgs.length - 1].startsWith("+")) {
             String presetName = cleanArgs[cleanArgs.length - 1].substring(1);
             PresetManager.PunishmentPreset preset = plugin.getPresetManager().getPreset(presetName);
@@ -95,6 +97,7 @@ public abstract class BasePunishCommand implements CommandExecutor {
                 MessageUtil.send(sender, "no_preset_permission", "preset", presetName);
                 return true;
             }
+            // Проверка соответствия перманентности
             if (isPermanent() && !preset.isPermanent()) {
                 MessageUtil.send(sender, "preset_has_duration", "preset", presetName, "command", commandName);
                 return true;
@@ -113,6 +116,7 @@ public abstract class BasePunishCommand implements CommandExecutor {
                 }
             }
         } else {
+            // Обычный ввод: имя, [длительность], причина
             duration = parseDuration(cleanArgs, 1);
             int reasonStart = (duration != null) ? 2 : 1;
             if (reasonStart >= cleanArgs.length) {
@@ -121,6 +125,24 @@ public abstract class BasePunishCommand implements CommandExecutor {
             }
             reason = String.join(" ", java.util.Arrays.copyOfRange(cleanArgs, reasonStart, cleanArgs.length));
         }
+
+        // ===== КОРРЕКЦИЯ ДЛИТЕЛЬНОСТИ В ЗАВИСИМОСТИ ОТ ТИПА КОМАНДЫ =====
+        if (isPermanent()) {
+            // Для перманентных команд длительность всегда null
+            duration = null;
+        } else {
+            // Для временных команд длительность обязательна
+            if (duration == null) {
+                MessageUtil.send(sender, "usage_" + commandName);
+                return true;
+            }
+            // Дополнительно можно проверить, что длительность положительная
+            if (duration <= 0) {
+                MessageUtil.send(sender, "invalid_time");
+                return true;
+            }
+        }
+        // ============================================================
 
         if (plugin.getSelfPunishChecker().isSelfPunish(sender, targetName)) return true;
 
@@ -185,6 +207,7 @@ public abstract class BasePunishCommand implements CommandExecutor {
             silent = false;
         }
 
+        // Выполнение наказания (duration уже скорректирован)
         executePunishment(sender, target, reason, finalServer, silent, duration);
 
         return true;

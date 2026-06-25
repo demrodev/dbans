@@ -18,10 +18,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class MySQLDatabase implements DatabaseManager {
     private final DBans plugin;
@@ -128,6 +126,17 @@ public class MySQLDatabase implements DatabaseManager {
                     "server_name VARCHAR(64) DEFAULT 'unknown'," +
                     "pardoned_by VARCHAR(16)," +
                     "pardoned_at BIGINT)");
+            // ===== НОВАЯ ТАБЛИЦА ДЛЯ УВЕДОМЛЕНИЙ =====
+            st.execute("CREATE TABLE IF NOT EXISTS player_notifications (" +
+                    "uuid VARCHAR(36) NOT NULL," +
+                    "message_key VARCHAR(64) NOT NULL," +
+                    "placeholders VARCHAR(255)," +
+                    "created BIGINT NOT NULL)");
+            try {
+                st.execute("CREATE INDEX idx_notif_uuid ON player_notifications(uuid)");
+            } catch (SQLException e) {
+                if (!e.getMessage().contains("Duplicate key name")) throw e;
+            }
         }
     }
 
@@ -135,6 +144,8 @@ public class MySQLDatabase implements DatabaseManager {
     public void close() {
         if (dataSource != null && !dataSource.isClosed()) dataSource.close();
     }
+
+    // ==================== ОСНОВНЫЕ МЕТОДЫ ДЛЯ НАКАЗАНИЙ ====================
 
     @Override
     public void savePunishment(Punishment punishment) {
@@ -160,19 +171,15 @@ public class MySQLDatabase implements DatabaseManager {
                     cache.invalidateActivePunishment(punishment.getPlayerUuid(), punishment.getType(), punishment.getServerName(), plugin.getMode());
                     cache.invalidateAllForPlayer(punishment.getPlayerUuid());
                 }
-
                 try {
                     EventManager em = plugin.getEventManager();
                     if (em != null && punishment.isActive()) {
-                        PunishmentCreateEvent event = new PunishmentCreateEvent(
-                                new PunishmentAdapter(punishment)
-                        );
+                        PunishmentCreateEvent event = new PunishmentCreateEvent(new PunishmentAdapter(punishment));
                         em.callEvent(event);
                     }
                 } catch (Exception e) {
                     plugin.getLogger().warning("Failed to call PunishmentCreateEvent: " + e.getMessage());
                 }
-
                 return;
             } catch (SQLException e) {
                 if (e.getErrorCode() == 1062 || e.getMessage().contains("Duplicate entry")) {
@@ -229,7 +236,6 @@ public class MySQLDatabase implements DatabaseManager {
                     cache.invalidateActivePunishment(p.getPlayerUuid(), p.getType(), p.getServerName(), plugin.getMode());
                 }
             }
-
             Punishment updated = getPunishmentById(id);
             if (updated != null) {
                 try {
@@ -393,8 +399,6 @@ public class MySQLDatabase implements DatabaseManager {
                     cache.invalidateActivePunishment(p.getPlayerUuid(), p.getType(), p.getServerName(), plugin.getMode());
                 }
             }
-
-            // Вызов события изменения причины
             Punishment updated = getPunishmentById(id);
             if (updated != null) {
                 try {
@@ -428,15 +432,15 @@ public class MySQLDatabase implements DatabaseManager {
         try {
             EventManager em = plugin.getEventManager();
             if (em != null) {
-                PunishmentRevokeEvent event = new PunishmentRevokeEvent(
-                        new PunishmentAdapter(p)
-                );
+                PunishmentRevokeEvent event = new PunishmentRevokeEvent(new PunishmentAdapter(p));
                 em.callEvent(event);
             }
         } catch (Exception e) {
             plugin.getLogger().warning("Failed to call PunishmentRevokeEvent: " + e.getMessage());
         }
     }
+
+    // ==================== IP-БАНЫ ====================
 
     @Override
     public void saveIpBan(String ip, UUID playerUuid, String playerName, String issuerName, String reason, long startTime, Long endTime) {
@@ -528,20 +532,22 @@ public class MySQLDatabase implements DatabaseManager {
     }
 
     @Override
-    public List<Punishment> getAllActivePunishmentsByType(PunishmentType type) {
-        List<Punishment> list = new ArrayList<>();
-        String sql = "SELECT * FROM punishments WHERE type=? AND active=1";
+    public List<String> getAllIpBans() {
+        List<String> list = new ArrayList<>();
+        String sql = "SELECT ip FROM ip_bans WHERE end_time IS NULL OR end_time > ?";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, type.name());
+            ps.setLong(1, System.currentTimeMillis());
             ResultSet rs = ps.executeQuery();
-            while (rs.next()) list.add(mapResultSet(rs));
+            while (rs.next()) list.add(rs.getString("ip"));
         } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to get all active punishments by type: " + e.getMessage());
+            plugin.getLogger().severe("Failed to get all IP bans: " + e.getMessage());
             e.printStackTrace();
         }
         return list;
     }
+
+    // ==================== ИГРОКИ ====================
 
     @Override
     public void savePlayer(PlayerInfo player) {
@@ -588,20 +594,50 @@ public class MySQLDatabase implements DatabaseManager {
     }
 
     @Override
-    public List<String> getAllIpBans() {
-        List<String> list = new ArrayList<>();
-        String sql = "SELECT ip FROM ip_bans WHERE end_time IS NULL OR end_time > ?";
+    public PlayerInfo getPlayerByName(String name) {
+        String sql = "SELECT * FROM players WHERE name=?";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setLong(1, System.currentTimeMillis());
+            ps.setString(1, name);
             ResultSet rs = ps.executeQuery();
-            while (rs.next()) list.add(rs.getString("ip"));
+            if (rs.next()) {
+                return new PlayerInfo(
+                        UUID.fromString(rs.getString("uuid")),
+                        rs.getString("name"),
+                        rs.getString("ip"),
+                        rs.getLong("last_seen")
+                );
+            }
         } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to get all IP bans: " + e.getMessage());
+            plugin.getLogger().severe("Failed to get player by name: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    @Override
+    public List<PlayerInfo> getAllPlayers() {
+        List<PlayerInfo> list = new ArrayList<>();
+        String sql = "SELECT * FROM players";
+        try (Connection conn = dataSource.getConnection();
+             Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+            while (rs.next()) {
+                list.add(new PlayerInfo(
+                        UUID.fromString(rs.getString("uuid")),
+                        rs.getString("name"),
+                        rs.getString("ip"),
+                        rs.getLong("last_seen")
+                ));
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to get all players: " + e.getMessage());
             e.printStackTrace();
         }
         return list;
     }
+
+    // ==================== JAIL ====================
 
     @Override
     public void saveJail(JailPunishment jail) {
@@ -739,22 +775,6 @@ public class MySQLDatabase implements DatabaseManager {
     }
 
     @Override
-    public JailPunishment getJailById(String id) {
-        String sql = "SELECT * FROM jail_punishments WHERE id=?";
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, id);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                return mapJailResultSet(rs);
-            }
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to get jail by ID: " + e.getMessage());
-        }
-        return null;
-    }
-
-    @Override
     public void setPendingUnjail(UUID playerId, boolean pending) {
         String sql = "UPDATE jail_punishments SET pending_unjail = ? WHERE player_uuid = ? AND active = 1";
         try (Connection conn = dataSource.getConnection();
@@ -787,142 +807,34 @@ public class MySQLDatabase implements DatabaseManager {
     }
 
     @Override
-    public List<Punishment> getActivePunishmentsIncludingJail(UUID playerUuid, String currentServer, String mode) {
-        List<Punishment> list = new ArrayList<>();
-
-        String sql1;
-        if ("sync_static".equalsIgnoreCase(mode)) {
-            sql1 = "SELECT * FROM punishments WHERE player_uuid=? AND active=1 AND server_name=?";
-        } else {
-            sql1 = "SELECT * FROM punishments WHERE player_uuid=? AND active=1";
-        }
+    public JailPunishment getJailById(String id) {
+        String sql = "SELECT * FROM jail_punishments WHERE id=?";
         try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql1)) {
-            ps.setString(1, playerUuid.toString());
-            if ("sync_static".equalsIgnoreCase(mode)) ps.setString(2, currentServer);
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, id);
             ResultSet rs = ps.executeQuery();
-            while (rs.next()) {
-                Punishment p = mapResultSet(rs);
-                if (!p.isExpired()) list.add(p);
-            }
+            if (rs.next()) return mapJailResultSet(rs);
         } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to get active punishments: " + e.getMessage());
+            plugin.getLogger().severe("Failed to get jail by ID: " + e.getMessage());
         }
-
-        String sql2;
-        if ("sync_static".equalsIgnoreCase(mode)) {
-            sql2 = "SELECT *, 'JAIL' as type FROM jail_punishments WHERE player_uuid=? AND active=1 AND server_name=?";
-        } else {
-            sql2 = "SELECT *, 'JAIL' as type FROM jail_punishments WHERE player_uuid=? AND active=1";
-        }
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql2)) {
-            ps.setString(1, playerUuid.toString());
-            if ("sync_static".equalsIgnoreCase(mode)) ps.setString(2, currentServer);
-            ResultSet rs = ps.executeQuery();
-            while (rs.next()) {
-                Punishment p = mapJailAsPunishment(rs);
-                if (!p.isExpired()) list.add(p);
-            }
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to get active jails: " + e.getMessage());
-        }
-
-        String sql3;
-        if ("sync_static".equalsIgnoreCase(mode)) {
-            sql3 = "SELECT *, 'WARNING' as type FROM warnings WHERE player_uuid=? AND active=1 AND server_name=?";
-        } else {
-            sql3 = "SELECT *, 'WARNING' as type FROM warnings WHERE player_uuid=? AND active=1";
-        }
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql3)) {
-            ps.setString(1, playerUuid.toString());
-            if ("sync_static".equalsIgnoreCase(mode)) ps.setString(2, currentServer);
-            ResultSet rs = ps.executeQuery();
-            while (rs.next()) {
-                Punishment p = mapWarningAsPunishment(rs);
-                if (!p.isExpired()) list.add(p);
-            }
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to get active warnings: " + e.getMessage());
-        }
-
-        list.sort(Comparator.comparingLong(Punishment::getStartTime).reversed());
-        return list;
+        return null;
     }
 
     @Override
-    public List<Punishment> getAllPunishmentsIncludingJail() {
-        List<Punishment> list = new ArrayList<>();
-
-        String sql1 = "SELECT id, player_uuid, player_name, issuer_uuid, issuer_name, type, reason, start_time, end_time, active, server_name, pardoned_by, pardoned_at, pardon_reason FROM punishments";
+    public List<JailPunishment> getAllJailsForAllPlayers() {
+        List<JailPunishment> list = new ArrayList<>();
+        String sql = "SELECT * FROM jail_punishments";
         try (Connection conn = dataSource.getConnection();
              Statement st = conn.createStatement();
-             ResultSet rs = st.executeQuery(sql1)) {
-            while (rs.next()) list.add(mapResultSet(rs));
+             ResultSet rs = st.executeQuery(sql)) {
+            while (rs.next()) list.add(mapJailResultSet(rs));
         } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to get punishments: " + e.getMessage());
+            plugin.getLogger().severe("Failed to get all jails: " + e.getMessage());
         }
-
-        String sql2 = "SELECT id, player_uuid, player_name, issuer_uuid, issuer_name, reason, start_time, end_time, active, server_name, pardoned_by, pardoned_at, 'JAIL' as type FROM jail_punishments";
-        try (Connection conn = dataSource.getConnection();
-             Statement st = conn.createStatement();
-             ResultSet rs = st.executeQuery(sql2)) {
-            while (rs.next()) list.add(mapJailAsPunishment(rs));
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to get jail punishments: " + e.getMessage());
-        }
-
-        String sql3 = "SELECT id, player_uuid, player_name, issuer_uuid, issuer_name, reason, start_time, end_time, active, server_name, pardoned_by, pardoned_at, 'WARNING' as type FROM warnings";
-        try (Connection conn = dataSource.getConnection();
-             Statement st = conn.createStatement();
-             ResultSet rs = st.executeQuery(sql3)) {
-            while (rs.next()) list.add(mapWarningAsPunishment(rs));
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to get warnings: " + e.getMessage());
-        }
-
-        list.sort(Comparator.comparingLong(Punishment::getStartTime).reversed());
         return list;
     }
 
-    @Override
-    public List<Punishment> getPunishmentHistoryIncludingJail(UUID playerUuid) {
-        List<Punishment> list = new ArrayList<>();
-
-        String sql1 = "SELECT * FROM punishments WHERE player_uuid = ?";
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql1)) {
-            ps.setString(1, playerUuid.toString());
-            ResultSet rs = ps.executeQuery();
-            while (rs.next()) list.add(mapResultSet(rs));
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to get punishment history (punishments): " + e.getMessage());
-        }
-
-        String sql2 = "SELECT *, 'JAIL' as type FROM jail_punishments WHERE player_uuid = ?";
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql2)) {
-            ps.setString(1, playerUuid.toString());
-            ResultSet rs = ps.executeQuery();
-            while (rs.next()) list.add(mapJailAsPunishment(rs));
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to get punishment history (jail): " + e.getMessage());
-        }
-
-        String sql3 = "SELECT *, 'WARNING' as type FROM warnings WHERE player_uuid = ?";
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql3)) {
-            ps.setString(1, playerUuid.toString());
-            ResultSet rs = ps.executeQuery();
-            while (rs.next()) list.add(mapWarningAsPunishment(rs));
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to get punishment history (warnings): " + e.getMessage());
-        }
-
-        list.sort(Comparator.comparingLong(Punishment::getStartTime).reversed());
-        return list;
-    }
+    // ==================== WARNINGS ====================
 
     @Override
     public void saveWarning(Warning warning) {
@@ -1075,16 +987,16 @@ public class MySQLDatabase implements DatabaseManager {
         return !getActiveWarnings(playerUuid).isEmpty();
     }
 
+    // ==================== УДАЛЕНИЕ ВСЕГО ====================
+
     @Override
     public void deleteAllPunishments() {
         String sql = "DELETE FROM punishments";
         try (Connection conn = dataSource.getConnection();
              Statement st = conn.createStatement()) {
-            int deleted = st.executeUpdate(sql);
-            plugin.getLogger().info("Deleted " + deleted + " punishments from database.");
+            st.executeUpdate(sql);
         } catch (SQLException e) {
             plugin.getLogger().severe("Failed to delete all punishments: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 
@@ -1093,11 +1005,9 @@ public class MySQLDatabase implements DatabaseManager {
         String sql = "DELETE FROM jail_punishments";
         try (Connection conn = dataSource.getConnection();
              Statement st = conn.createStatement()) {
-            int deleted = st.executeUpdate(sql);
-            plugin.getLogger().info("Deleted " + deleted + " jail punishments from database.");
+            st.executeUpdate(sql);
         } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to delete all jail punishments: " + e.getMessage());
-            e.printStackTrace();
+            plugin.getLogger().severe("Failed to delete all jails: " + e.getMessage());
         }
     }
 
@@ -1106,13 +1016,13 @@ public class MySQLDatabase implements DatabaseManager {
         String sql = "DELETE FROM warnings";
         try (Connection conn = dataSource.getConnection();
              Statement st = conn.createStatement()) {
-            int deleted = st.executeUpdate(sql);
-            plugin.getLogger().info("Deleted " + deleted + " warnings from database.");
+            st.executeUpdate(sql);
         } catch (SQLException e) {
             plugin.getLogger().severe("Failed to delete all warnings: " + e.getMessage());
-            e.printStackTrace();
         }
     }
+
+    // ==================== СТАТИСТИКА ДЛЯ PLACEHOLDERAPI ====================
 
     @Override
     public int getTotalPunishmentsCount() {
@@ -1234,6 +1144,234 @@ public class MySQLDatabase implements DatabaseManager {
         return 0;
     }
 
+    // ==================== НОВЫЕ МЕТОДЫ ДЛЯ УВЕДОМЛЕНИЙ ====================
+
+    @Override
+    public void addNotification(UUID playerUuid, String messageKey, Map<String, String> placeholders) {
+        String sql = "INSERT INTO player_notifications (uuid, message_key, placeholders, created) VALUES (?, ?, ?, ?)";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerUuid.toString());
+            ps.setString(2, messageKey);
+            if (placeholders != null && !placeholders.isEmpty()) {
+                StringBuilder sb = new StringBuilder();
+                for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+                    sb.append(entry.getKey()).append("=").append(entry.getValue()).append(";");
+                }
+                ps.setString(3, sb.toString());
+            } else {
+                ps.setString(3, null);
+            }
+            ps.setLong(4, System.currentTimeMillis());
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to add notification: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public List<Map<String, String>> getAndClearNotifications(UUID playerUuid) {
+        List<Map<String, String>> result = new ArrayList<>();
+        String select = "SELECT message_key, placeholders FROM player_notifications WHERE uuid = ? ORDER BY created ASC";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(select)) {
+            ps.setString(1, playerUuid.toString());
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                Map<String, String> map = new HashMap<>();
+                map.put("key", rs.getString("message_key"));
+                String placeholdersStr = rs.getString("placeholders");
+                if (placeholdersStr != null && !placeholdersStr.isEmpty()) {
+                    String[] pairs = placeholdersStr.split(";");
+                    for (String pair : pairs) {
+                        String[] kv = pair.split("=", 2);
+                        if (kv.length == 2) map.put(kv[0], kv[1]);
+                    }
+                }
+                result.add(map);
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to get notifications: " + e.getMessage());
+        }
+        String delete = "DELETE FROM player_notifications WHERE uuid = ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(delete)) {
+            ps.setString(1, playerUuid.toString());
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to clear notifications: " + e.getMessage());
+        }
+        return result;
+    }
+
+    @Override
+    public void clearNotifications(UUID playerUuid) {
+        String sql = "DELETE FROM player_notifications WHERE uuid = ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerUuid.toString());
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to clear notifications: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public long getLastSeen(UUID uuid) {
+        String sql = "SELECT last_seen FROM players WHERE uuid = ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, uuid.toString());
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getLong("last_seen");
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to get last_seen: " + e.getMessage());
+        }
+        return 0;
+    }
+
+    // ==================== НОВЫЕ МЕТОДЫ ДЛЯ ОПТИМИЗАЦИИ ====================
+
+    @Override
+    public String getPlayerIpByName(String playerName) {
+        String sql = "SELECT ip FROM players WHERE name = ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerName);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getString("ip");
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to get IP by name: " + e.getMessage());
+        }
+        return null;
+    }
+
+    @Override
+    public List<String> getPlayerNamesByIp(String playerName) {
+        List<String> names = new ArrayList<>();
+        String sql = "SELECT name FROM players WHERE ip = (SELECT ip FROM players WHERE name = ?) AND name != ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerName);
+            ps.setString(2, playerName);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                names.add(rs.getString("name"));
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to get player names by IP: " + e.getMessage());
+        }
+        return names;
+    }
+
+    @Override
+    public Map<UUID, List<Punishment>> getActivePunishmentsForPlayers(Set<UUID> playerUuids, String currentServer, String mode) {
+        Map<UUID, List<Punishment>> result = new HashMap<>();
+        if (playerUuids.isEmpty()) return result;
+
+        String placeholders = String.join(",", Collections.nCopies(playerUuids.size(), "?"));
+        String sql;
+        if ("sync_static".equalsIgnoreCase(mode)) {
+            sql = "SELECT * FROM punishments WHERE player_uuid IN (" + placeholders + ") AND active=1 AND server_name=?";
+        } else {
+            sql = "SELECT * FROM punishments WHERE player_uuid IN (" + placeholders + ") AND active=1";
+        }
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            int index = 1;
+            for (UUID uuid : playerUuids) {
+                ps.setString(index++, uuid.toString());
+            }
+            if ("sync_static".equalsIgnoreCase(mode)) {
+                ps.setString(index, currentServer);
+            }
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                Punishment p = mapResultSet(rs);
+                result.computeIfAbsent(p.getPlayerUuid(), k -> new ArrayList<>()).add(p);
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to get active punishments for players: " + e.getMessage());
+        }
+        return result;
+    }
+
+    @Override
+    public List<Punishment> getActivePunishmentsIncludingJail(UUID playerUuid, String currentServer, String mode) {
+        List<Punishment> list = new ArrayList<>();
+        // Получаем обычные наказания
+        list.addAll(getActivePunishments(playerUuid, currentServer, mode));
+        // Получаем активные джейлы
+        JailPunishment jail = getActiveJail(playerUuid);
+        if (jail != null && jail.isActive() && !jail.isExpired()) {
+            Punishment p = mapJailAsPunishment(jail);
+            if (!p.isExpired()) list.add(p);
+        }
+        // Получаем активные варны
+        List<Warning> warnings = getActiveWarnings(playerUuid);
+        for (Warning w : warnings) {
+            Punishment p = mapWarningAsPunishment(w);
+            if (!p.isExpired()) list.add(p);
+        }
+        list.sort(Comparator.comparingLong(Punishment::getStartTime).reversed());
+        return list;
+    }
+
+    @Override
+    public List<Punishment> getAllPunishmentsIncludingJail() {
+        List<Punishment> list = new ArrayList<>(getAllPunishments());
+        // Добавляем джейлы
+        List<JailPunishment> jails = getAllJailsForAllPlayers();
+        for (JailPunishment j : jails) {
+            list.add(mapJailAsPunishment(j));
+        }
+        // Добавляем варны
+        List<Warning> warnings = getAllWarnings();
+        for (Warning w : warnings) {
+            list.add(mapWarningAsPunishment(w));
+        }
+        list.sort(Comparator.comparingLong(Punishment::getStartTime).reversed());
+        return list;
+    }
+
+    @Override
+    public List<Punishment> getPunishmentHistoryIncludingJail(UUID playerUuid) {
+        List<Punishment> list = new ArrayList<>(getPunishmentHistory(playerUuid, true));
+        List<JailPunishment> jails = getAllJailsForPlayer(playerUuid);
+        for (JailPunishment j : jails) {
+            list.add(mapJailAsPunishment(j));
+        }
+        List<Warning> warnings = getAllWarningsForPlayer(playerUuid);
+        for (Warning w : warnings) {
+            list.add(mapWarningAsPunishment(w));
+        }
+        list.sort(Comparator.comparingLong(Punishment::getStartTime).reversed());
+        return list;
+    }
+
+    @Override
+    public List<Punishment> getAllActivePunishmentsByType(PunishmentType type) {
+        List<Punishment> list = new ArrayList<>();
+        String sql = "SELECT * FROM punishments WHERE type=? AND active=1";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, type.name());
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                list.add(mapResultSet(rs));
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to get all active punishments by type: " + e.getMessage());
+        }
+        return list;
+    }
+
+    // ==================== MAP METHODS ====================
+
     private Punishment mapResultSet(ResultSet rs) throws SQLException {
         Punishment p = new Punishment();
         p.setId(rs.getString("id"));
@@ -1255,43 +1393,39 @@ public class MySQLDatabase implements DatabaseManager {
         return p;
     }
 
-    private Punishment mapJailAsPunishment(ResultSet rs) throws SQLException {
+    private Punishment mapJailAsPunishment(JailPunishment jail) {
         Punishment p = new Punishment();
-        p.setId(rs.getString("id"));
-        p.setPlayerUuid(UUID.fromString(rs.getString("player_uuid")));
-        p.setPlayerName(rs.getString("player_name"));
-        p.setIssuerUuid(UUID.fromString(rs.getString("issuer_uuid")));
-        p.setIssuerName(rs.getString("issuer_name"));
+        p.setId(jail.getId());
+        p.setPlayerUuid(jail.getPlayerUuid());
+        p.setPlayerName(jail.getPlayerName());
+        p.setIssuerUuid(jail.getIssuerUuid());
+        p.setIssuerName(jail.getIssuerName());
         p.setType(PunishmentType.JAIL);
-        p.setReason(rs.getString("reason"));
-        p.setStartTime(rs.getLong("start_time"));
-        long end = rs.getLong("end_time");
-        p.setEndTime(rs.wasNull() ? null : end);
-        p.setActive(rs.getBoolean("active"));
-        p.setServerName(rs.getString("server_name"));
-        p.setPardonedBy(rs.getString("pardoned_by"));
-        long pardonedAt = rs.getLong("pardoned_at");
-        p.setPardonedAt(rs.wasNull() ? null : pardonedAt);
+        p.setReason(jail.getReason());
+        p.setStartTime(jail.getStartTime());
+        p.setEndTime(jail.getEndTime());
+        p.setActive(jail.isActive());
+        p.setServerName(jail.getServerName());
+        p.setPardonedBy(jail.getPardonedBy());
+        p.setPardonedAt(jail.getPardonedAt());
         return p;
     }
 
-    private Punishment mapWarningAsPunishment(ResultSet rs) throws SQLException {
+    private Punishment mapWarningAsPunishment(Warning warning) {
         Punishment p = new Punishment();
-        p.setId(rs.getString("id"));
-        p.setPlayerUuid(UUID.fromString(rs.getString("player_uuid")));
-        p.setPlayerName(rs.getString("player_name"));
-        p.setIssuerUuid(UUID.fromString(rs.getString("issuer_uuid")));
-        p.setIssuerName(rs.getString("issuer_name"));
+        p.setId(warning.getId());
+        p.setPlayerUuid(warning.getPlayerUuid());
+        p.setPlayerName(warning.getPlayerName());
+        p.setIssuerUuid(warning.getIssuerUuid());
+        p.setIssuerName(warning.getIssuerName());
         p.setType(PunishmentType.WARNING);
-        p.setReason(rs.getString("reason"));
-        p.setStartTime(rs.getLong("start_time"));
-        long end = rs.getLong("end_time");
-        p.setEndTime(rs.wasNull() ? null : end);
-        p.setActive(rs.getBoolean("active"));
-        p.setServerName(rs.getString("server_name"));
-        p.setPardonedBy(rs.getString("pardoned_by"));
-        long pardonedAt = rs.getLong("pardoned_at");
-        p.setPardonedAt(rs.wasNull() ? null : pardonedAt);
+        p.setReason(warning.getReason());
+        p.setStartTime(warning.getStartTime());
+        p.setEndTime(warning.getEndTime());
+        p.setActive(warning.isActive());
+        p.setServerName(warning.getServerName());
+        p.setPardonedBy(warning.getPardonedBy());
+        p.setPardonedAt(warning.getPardonedAt());
         return p;
     }
 
@@ -1365,49 +1499,5 @@ public class MySQLDatabase implements DatabaseManager {
         long pardonedAt = rs.getLong("pardoned_at");
         w.setPardonedAt(rs.wasNull() ? null : pardonedAt);
         return w;
-    }
-
-    @Override
-    public PlayerInfo getPlayerByName(String name) {
-        String sql = "SELECT * FROM players WHERE name=?";
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, name);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                return new PlayerInfo(
-                        UUID.fromString(rs.getString("uuid")),
-                        rs.getString("name"),
-                        rs.getString("ip"),
-                        rs.getLong("last_seen")
-                );
-            }
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to get player by name: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    @Override
-    public List<PlayerInfo> getAllPlayers() {
-        List<PlayerInfo> list = new ArrayList<>();
-        String sql = "SELECT * FROM players";
-        try (Connection conn = dataSource.getConnection();
-             Statement st = conn.createStatement();
-             ResultSet rs = st.executeQuery(sql)) {
-            while (rs.next()) {
-                list.add(new PlayerInfo(
-                        UUID.fromString(rs.getString("uuid")),
-                        rs.getString("name"),
-                        rs.getString("ip"),
-                        rs.getLong("last_seen")
-                ));
-            }
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to get all players: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return list;
     }
 }
