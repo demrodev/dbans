@@ -1,5 +1,6 @@
 package me.demro.dbans.command;
 
+import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import me.demro.dbans.model.Punishment;
 import me.demro.dbans.util.MessageUtil;
@@ -7,10 +8,12 @@ import me.demro.dbans.util.TimeUtil;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
+@Slf4j
 public class PunListCommand implements CommandExecutor {
     private final DBans plugin;
     private SimpleDateFormat dateFormat;

@@ -1,15 +1,19 @@
 package me.demro.dbans.command;
 
-import me.demro.dbans.model.Punishment;
-import me.demro.dbans.model.PunishmentType;
+import lombok.extern.slf4j.Slf4j;
+import me.demro.dbans.DBans;
+import me.demro.dlibs.dbans.api.exception.PlayerNotFoundException;
+import me.demro.dlibs.dbans.api.player.PlayerIdentity;
+import me.demro.dlibs.dbans.api.punishment.*;
 import me.demro.dbans.util.MessageUtil;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+@Slf4j
 public class MuteCommand extends BasePunishCommand {
 
-    public MuteCommand(me.demro.dbans.DBans plugin) {
+    public MuteCommand(DBans plugin) {
         super(plugin);
     }
 
@@ -30,27 +34,34 @@ public class MuteCommand extends BasePunishCommand {
 
     @Override
     protected void executePunishment(CommandSender sender, OfflinePlayer target, String reason, String finalServer, boolean silent, Long duration) {
-        Punishment mute = new Punishment(target.getUniqueId(), target.getName(),
-                sender instanceof Player ? ((Player) sender).getUniqueId() : CONSOLE_UUID,
-                sender.getName(), PunishmentType.MUTE, reason, System.currentTimeMillis(), null, finalServer);
-        plugin.getDatabase().savePunishment(mute);
-        // ======== ВСТАВКА ========
-        if (plugin.getProxySyncManager() != null) {
-            plugin.getProxySyncManager().sendPunishmentCreate(mute);
-            plugin.getLogger().info("📤 [Sync] Sent punishment_create for " + mute.getId());
-        }
-        // ==========================
+        PunishmentCreateRequest request = PunishmentCreateRequest.builder()
+                .target(PlayerIdentity.of(target.getUniqueId(), target.getName()))
+                .type(PunishmentType.MUTE)
+                .reason(PunishmentReason.of(reason))
+                .duration(PunishmentDuration.permanent())
+                .issuer(sender instanceof Player
+                        ? PunishmentIssuer.player(((Player) sender).getUniqueId(), sender.getName())
+                        : PunishmentIssuer.console())
+                .serverName(finalServer)
+                .options(PunishmentOptions.builder()
+                        .silent(silent)
+                        .broadcast(!silent)
+                        .notifyTarget(true)
+                        .build())
+                .build();
 
-        Player online = target.getPlayer();
-        if (online != null && finalServer.equals(plugin.getServerName())) {
-            MessageUtil.send(online, "mute_player",
-                    "sender", sender.getName(), "reason", reason,
-                    "server", finalServer, "id", mute.getId());
-        }
-
-        String permission = silent ? null : "dbans.notify.mute";
-        MessageUtil.broadcast(permission, "mute_broadcast",
-                "sender", sender.getName(), "target", target.getName(),
-                "reason", reason, "server", finalServer, "id", mute.getId());
+        plugin.getApi().punishments().create(request)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        if (ex instanceof PlayerNotFoundException) {
+                            MessageUtil.send(sender, "player_not_found", "target", target.getName());
+                        } else {
+                            MessageUtil.send(sender, "error_creating_punishment", "error", ex.getMessage());
+                            log.error("Error creating mute", ex);
+                        }
+                    } else {
+                        log.info("Player {} muted by {}", target.getName(), sender.getName());
+                    }
+                });
     }
 }

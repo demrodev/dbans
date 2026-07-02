@@ -1,5 +1,7 @@
 package me.demro.dbans.util;
 
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
@@ -18,6 +20,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 public class LimitsManager {
     private final DBans plugin;
     private final LuckPerms luckPerms;
@@ -50,7 +53,7 @@ public class LimitsManager {
         YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
         ConfigurationSection sec = config.getConfigurationSection("groups");
         if (sec == null) {
-            plugin.getLogger().severe("limits.yml missing 'groups' section!");
+            log.error("limits.yml missing 'groups' section!");
             return;
         }
         for (String groupName : sec.getKeys(false)) {
@@ -68,7 +71,7 @@ public class LimitsManager {
                         try {
                             data.maxDurations.put(key, TimeUtil.parseDuration(val));
                         } catch (IllegalArgumentException e) {
-                            plugin.getLogger().warning("Invalid duration for " + groupName + "." + key + ": " + val);
+                            log.warn("Invalid duration for {}.{}: {}", groupName, key, val);
                             data.maxDurations.put(key, -1L);
                         }
                     }
@@ -88,11 +91,11 @@ public class LimitsManager {
 
         defaultData = groups.get("default");
         if (defaultData == null) {
-            plugin.getLogger().warning("No 'default' group in limits.yml, creating fallback");
+            log.warn("No 'default' group in limits.yml, creating fallback");
             defaultData = new GroupData();
             defaultData.priority = 1;
         }
-        plugin.getLogger().info("Loaded limits for " + groups.size() + " groups");
+        log.info("Loaded limits for {} groups", groups.size());
     }
 
     private CachedPlayerData getCachedPlayerData(UUID uuid) {

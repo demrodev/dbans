@@ -1,9 +1,11 @@
 package me.demro.dbans.command;
 
+import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
-import me.demro.dbans.model.Punishment;
-import me.demro.dbans.model.PunishmentType;
-import me.demro.dbans.util.*;
+import me.demro.dlibs.dbans.api.exception.PlayerNotFoundException;
+import me.demro.dlibs.dbans.api.player.PlayerIdentity;
+import me.demro.dlibs.dbans.api.punishment.*;
+import me.demro.dbans.util.MessageUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
@@ -11,10 +13,14 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+@Slf4j
 public class BanIpCommand implements CommandExecutor {
+
     private final DBans plugin;
     private static final Pattern IP_PATTERN = Pattern.compile("^(\\d{1,3}\\.){3}\\d{1,3}$");
     private static final Pattern IP_MASK_PATTERN = Pattern.compile("^(\\d{1,3}\\.){3}\\*$");
@@ -32,21 +38,23 @@ public class BanIpCommand implements CommandExecutor {
 
         boolean silent = false;
         String targetServer = null;
-        String[] cleaned = new String[args.length];
-        int cleanedIdx = 0;
+        List<String> filteredArgs = new ArrayList<>();
 
-        for (int i = 0; i < args.length; i++) {
-            String arg = args[i];
+        for (String arg : args) {
             if (arg.equalsIgnoreCase("-s")) {
                 silent = true;
             } else if (arg.toLowerCase().startsWith("server:")) {
                 targetServer = arg.substring(7);
                 if (targetServer.isEmpty()) targetServer = null;
             } else {
-                cleaned[cleanedIdx++] = arg;
+                filteredArgs.add(arg);
             }
         }
-        String[] cleanArgs = java.util.Arrays.copyOf(cleaned, cleanedIdx);
+
+        if (filteredArgs.isEmpty()) {
+            MessageUtil.send(sender, "usage_banip");
+            return true;
+        }
 
         if (targetServer != null) {
             boolean canUseServer = sender.hasPermission("dbans.server.bypass") ||
@@ -57,17 +65,12 @@ public class BanIpCommand implements CommandExecutor {
             }
         }
 
-        if (cleanArgs.length < 1) {
-            MessageUtil.send(sender, "usage_banip");
-            return true;
-        }
-
-        String targetInput = cleanArgs[0];
-        String reason = cleanArgs.length >= 2 ? String.join(" ", java.util.Arrays.copyOfRange(cleanArgs, 1, cleanArgs.length)) : "Не указана";
+        String targetInput = filteredArgs.get(0);
+        String reason = filteredArgs.size() >= 2 ? String.join(" ", filteredArgs.subList(1, filteredArgs.size())) : "Не указана";
         String ipOrMask;
         OfflinePlayer target = null;
         UUID playerUuid = null;
-        String playerName = null;
+        String playerName;
 
         Player onlineTarget = Bukkit.getPlayer(targetInput);
         if (onlineTarget != null) {
@@ -75,13 +78,21 @@ public class BanIpCommand implements CommandExecutor {
             ipOrMask = onlineTarget.getAddress().getAddress().getHostAddress();
             playerName = onlineTarget.getName();
             playerUuid = onlineTarget.getUniqueId();
-            if (!plugin.getLimitsManager().canPunish(sender, target)) return true;
-            if (plugin.getLimitsManager().isImmune(target, "banip")) {
-                MessageUtil.send(sender, "target_immune_permission", "target", target.getName());
+            // Проверка через новый API
+            if (plugin.getApi().permissions().canPunish(
+                    sender instanceof Player ? ((Player) sender).getUniqueId() : UUID.nameUUIDFromBytes("CONSOLE".getBytes()),
+                    playerUuid
+            ).join() == false) {
+                MessageUtil.send(sender, "cannot_punish_higher_priority", "target", playerName);
+                return true;
+            }
+            if (plugin.getApi().permissions().hasImmunity(playerUuid, PunishmentType.IP_BAN).join()) {
+                MessageUtil.send(sender, "target_immune_permission", "target", playerName);
                 return true;
             }
             if (plugin.getSelfPunishChecker().isSelfPunish(sender, playerName)) return true;
         } else if (IP_PATTERN.matcher(targetInput).matches() || IP_MASK_PATTERN.matcher(targetInput).matches()) {
+            playerName = null;
             ipOrMask = targetInput;
         } else {
             OfflinePlayer offlineTarget = Bukkit.getOfflinePlayer(targetInput);
@@ -97,9 +108,15 @@ public class BanIpCommand implements CommandExecutor {
                 MessageUtil.send(sender, "ip_not_found_for_player", "target", playerName);
                 return true;
             }
-            if (!plugin.getLimitsManager().canPunish(sender, target)) return true;
-            if (plugin.getLimitsManager().isImmune(target, "banip")) {
-                MessageUtil.send(sender, "target_immune_permission", "target", target.getName());
+            if (plugin.getApi().permissions().canPunish(
+                    sender instanceof Player ? ((Player) sender).getUniqueId() : UUID.nameUUIDFromBytes("CONSOLE".getBytes()),
+                    playerUuid
+            ).join() == false) {
+                MessageUtil.send(sender, "cannot_punish_higher_priority", "target", playerName);
+                return true;
+            }
+            if (plugin.getApi().permissions().hasImmunity(playerUuid, PunishmentType.IP_BAN).join()) {
+                MessageUtil.send(sender, "target_immune_permission", "target", playerName);
                 return true;
             }
             if (plugin.getSelfPunishChecker().isSelfPunish(sender, playerName)) return true;
@@ -126,75 +143,40 @@ public class BanIpCommand implements CommandExecutor {
             return true;
         }
 
-        plugin.getDatabase().saveIpBan(ipOrMask, playerUuid, playerName, sender.getName(), reason, System.currentTimeMillis(), null);
-        Punishment ipBanPunishment = null;
-        if (playerUuid != null) {
-            ipBanPunishment = new Punishment(playerUuid, playerName,
-                    (sender instanceof Player) ? ((Player) sender).getUniqueId() : UUID.nameUUIDFromBytes("CONSOLE".getBytes()),
-                    sender.getName(), PunishmentType.IPBAN, reason, System.currentTimeMillis(), null, finalServer);
-            plugin.getDatabase().savePunishment(ipBanPunishment);
-            // ======== ВСТАВКА ========
-            if (plugin.getProxySyncManager() != null) {
-                plugin.getProxySyncManager().sendPunishmentCreate(ipBanPunishment);
-                plugin.getLogger().info("📤 [Sync] Sent punishment_create for " + ipBanPunishment.getId());
-            }
-            // ==========================
-        }
+        // Создаём IP-бан через новый API
+        PunishmentCreateRequest request = PunishmentCreateRequest.builder()
+                .target(PlayerIdentity.of(playerUuid != null ? playerUuid : UUID.randomUUID(), playerName != null ? playerName : ipOrMask))
+                .type(PunishmentType.IP_BAN)
+                .reason(PunishmentReason.of(reason))
+                .duration(PunishmentDuration.permanent())
+                .issuer(sender instanceof Player
+                        ? PunishmentIssuer.player(((Player) sender).getUniqueId(), sender.getName())
+                        : PunishmentIssuer.console())
+                .serverName(finalServer)
+                .options(PunishmentOptions.builder()
+                        .silent(silent)
+                        .broadcast(!silent)
+                        .notifyTarget(true)
+                        .build())
+                .build();
 
-        if (sender instanceof Player) {
-            plugin.getLimitsManager().setCooldown((Player) sender, "banip");
-        }
+        plugin.getApi().punishments().create(request)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        if (ex instanceof PlayerNotFoundException) {
+                            MessageUtil.send(sender, "player_not_found", "target", playerName != null ? playerName : ipOrMask);
+                        } else {
+                            MessageUtil.send(sender, "error_creating_punishment", "error", ex.getMessage());
+                            log.error("Error creating IP ban", ex);
+                        }
+                    } else {
+                        if (sender instanceof Player) {
+                            plugin.getLimitsManager().setCooldown((Player) sender, "banip");
+                        }
+                        log.info("IP {} banned by {}", ipOrMask, sender.getName());
+                    }
+                });
 
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            String playerIp = p.getAddress().getAddress().getHostAddress();
-            if (matchesIpMask(playerIp, ipOrMask)) {
-                String kickMsg = MessageUtil.getRawMessage("banip_player");
-                if (kickMsg == null) kickMsg = "&c✖ Ваш IP-адрес заблокирован.\nПричина: %reason%\nАдминистратор: %sender%";
-                kickMsg = kickMsg.replace("%reason%", reason).replace("%sender%", sender.getName());
-                p.kickPlayer(MessageUtil.serializeForKick(kickMsg));
-            }
-        }
-
-        boolean canSilent = true;
-        if (sender instanceof Player) {
-            canSilent = plugin.getLimitsManager().canUseSilent((Player) sender, "banip");
-        }
-        if (silent && !canSilent) {
-            MessageUtil.send(sender, "silent_not_allowed", "command", "banip");
-            silent = false;
-        }
-
-        String id = ipBanPunishment != null ? ipBanPunishment.getId() : "N/A";
-        if (!silent) {
-            MessageUtil.broadcast("dbans.notify.ipban", "banip_broadcast",
-                    "sender", sender.getName(),
-                    "target", playerName != null ? playerName : ipOrMask,
-                    "reason", reason,
-                    "server", finalServer,
-                    "id", id);
-        } else {
-            MessageUtil.send(sender, "banip_broadcast",
-                    "sender", sender.getName(),
-                    "target", playerName != null ? playerName : ipOrMask,
-                    "reason", reason,
-                    "server", finalServer,
-                    "id", id);
-        }
         return true;
-    }
-
-    private boolean matchesIpMask(String ip, String ipOrMask) {
-        if (ipOrMask.contains("*")) {
-            String[] maskParts = ipOrMask.split("\\.");
-            String[] ipParts = ip.split("\\.");
-            for (int i = 0; i < 4; i++) {
-                if (!maskParts[i].equals("*") && !maskParts[i].equals(ipParts[i])) {
-                    return false;
-                }
-            }
-            return true;
-        } else {
-            return ip.equals(ipOrMask);
-        }
     }
 }

@@ -1,5 +1,6 @@
 package me.demro.dbans.command;
 
+import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import me.demro.dbans.util.MessageUtil;
 import org.bukkit.Bukkit;
@@ -8,8 +9,10 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+
 import java.net.InetAddress;
 
+@Slf4j
 public class GeoIpCommand implements CommandExecutor {
     private final DBans plugin;
 
@@ -37,7 +40,7 @@ public class GeoIpCommand implements CommandExecutor {
         } else if (isValidIp(target)) {
             ip = target;
         } else {
-            OfflinePlayer offline = Bukkit.getOfflinePlayer(target);
+            OfflinePlayer offline = plugin.getPlayerCache().getOfflinePlayer(target);
             if (!offline.hasPlayedBefore()) {
                 MessageUtil.send(sender, "player_not_found", "target", target);
                 return true;

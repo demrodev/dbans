@@ -1,16 +1,21 @@
 package me.demro.dbans.command;
 
+import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
-import me.demro.dbans.api.adapter.PunishmentAdapter;
-import me.demro.dbans.model.Punishment;
+import me.demro.dlibs.dbans.api.exception.PunishmentNotFoundException;
+import me.demro.dlibs.dbans.api.punishment.PunishmentId;
+import me.demro.dlibs.dbans.api.punishment.Punishment;
 import me.demro.dbans.util.MessageUtil;
-import me.demro.dlibs.api.EventManager;
-import me.demro.dlibs.api.events.PunishmentModifyEvent;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+
+@Slf4j
 public class AltReasonCommand implements CommandExecutor {
+
     private final DBans plugin;
 
     public AltReasonCommand(DBans plugin) {
@@ -29,39 +34,19 @@ public class AltReasonCommand implements CommandExecutor {
         }
         String id = args[0];
         String newReason = String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length));
-        Punishment punishment = plugin.getDatabase().getPunishmentById(id);
-        if (punishment == null) {
+
+        // Проверяем существование через новый API
+        CompletableFuture<Optional<Punishment>> future = plugin.getApi().punishments().findById(PunishmentId.of(id));
+        Optional<Punishment> opt = future.join();
+        if (opt.isEmpty()) {
             MessageUtil.send(sender, "punishment_not_found", "id", id);
             return true;
         }
 
-        String oldReason = punishment.getReason();
+        // Обновляем через прямой вызов к БД (в новом API нет метода изменения причины)
         plugin.getDatabase().updatePunishmentReason(id, newReason);
-        if (plugin.getProxySyncManager() != null) {
-            Punishment updated = plugin.getDatabase().getPunishmentById(id);
-            if (updated != null) {
-                plugin.getProxySyncManager().sendPunishmentModify(updated, oldReason, null);
-            }
-        }
         MessageUtil.send(sender, "reason_updated", "id", id, "reason", newReason);
-
-        try {
-            EventManager em = plugin.getEventManager();
-            if (em != null) {
-                // Получаем обновлённое наказание
-                Punishment updated = plugin.getDatabase().getPunishmentById(id);
-                if (updated != null) {
-                    PunishmentModifyEvent event = new PunishmentModifyEvent(
-                            new PunishmentAdapter(updated),
-                            oldReason, newReason, null, null
-                    );
-                    em.callEvent(event);
-                }
-            }
-        } catch (Exception e) {
-            plugin.getLogger().warning("Failed to call PunishmentModifyEvent: " + e.getMessage());
-        }
-
+        log.info("Reason for punishment {} changed to '{}' by {}", id, newReason, sender.getName());
         return true;
     }
 }

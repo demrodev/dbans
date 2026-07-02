@@ -1,10 +1,11 @@
 package me.demro.dbans.listener;
 
+import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
-import me.demro.dbans.model.Punishment;
-import me.demro.dbans.model.PunishmentType;
 import me.demro.dbans.util.MessageUtil;
 import me.demro.dbans.util.TimeUtil;
+import me.demro.dlibs.dbans.api.punishment.Punishment;
+import me.demro.dlibs.dbans.api.punishment.PunishmentType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -12,11 +13,12 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import io.papermc.paper.event.player.AsyncChatEvent;
 
-/**
- * Слушатель чата и команд – блокировка замученных игроков.
- * Использует кэш БД, поэтому дополнительные оптимизации не требуются.
- */
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
+@Slf4j
 public class ChatListener implements Listener {
+
     private final DBans plugin;
 
     public ChatListener(DBans plugin) {
@@ -26,25 +28,36 @@ public class ChatListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onChat(AsyncChatEvent event) {
         Player player = event.getPlayer();
-        Punishment mute = plugin.getDatabase().getActivePunishment(player.getUniqueId(), PunishmentType.MUTE,
-                plugin.getServerName(), plugin.getMode());
-        if (mute == null) return;
+        // Проверка мута через новый API
+        CompletableFuture<Boolean> hasMuteFuture = plugin.getApi().punishments().hasActive(player.getUniqueId(), PunishmentType.MUTE);
+        if (!hasMuteFuture.join()) {
+            return;
+        }
 
+        // Если есть мут – получаем его для деталей
+        CompletableFuture<List<Punishment>> muteListFuture = plugin.getApi().punishments().findActiveByTarget(player.getUniqueId());
+        List<Punishment> mutes = muteListFuture.join();
+        if (mutes.isEmpty()) {
+            return;
+        }
+        Punishment mute = mutes.get(0);
         event.setCancelled(true);
-        String duration = mute.getEndTime() == null ? "навсегда" : TimeUtil.formatDuration(mute.getEndTime() - System.currentTimeMillis());
+        String duration = mute.isPermanent() ? "навсегда" : TimeUtil.formatDuration(mute.expiresAt().get().toEpochMilli() - System.currentTimeMillis());
         MessageUtil.send(player, "cannot_chat",
                 "duration", duration,
-                "reason", mute.getReason(),
-                "sender", mute.getIssuerName(),
-                "server", mute.getServerName());
+                "reason", mute.reason().value(),
+                "sender", mute.issuer().name(),
+                "server", mute.serverName());
     }
 
     @EventHandler
     public void onCommand(PlayerCommandPreprocessEvent event) {
         Player player = event.getPlayer();
-        Punishment mute = plugin.getDatabase().getActivePunishment(player.getUniqueId(), PunishmentType.MUTE,
-                plugin.getServerName(), plugin.getMode());
-        if (mute == null) return;
+        // Проверка мута через API
+        CompletableFuture<Boolean> hasMuteFuture = plugin.getApi().punishments().hasActive(player.getUniqueId(), PunishmentType.MUTE);
+        if (!hasMuteFuture.join()) {
+            return;
+        }
 
         String command = event.getMessage().toLowerCase();
         if (command.startsWith("/")) command = command.substring(1);

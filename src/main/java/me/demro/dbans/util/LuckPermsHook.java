@@ -1,23 +1,26 @@
 package me.demro.dbans.util;
 
+import lombok.extern.slf4j.Slf4j;
+import me.demro.dbans.DBans;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
 import net.luckperms.api.model.user.User;
 import org.bukkit.entity.Player;
-import me.demro.dbans.DBans;
 
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 public class LuckPermsHook {
     private final LuckPerms luckPerms;
     private final Map<UUID, CachedGroup> groupCache = new ConcurrentHashMap<>();
-    private final long cacheTtlMillis = TimeUnit.SECONDS.toMillis(10); // 10 секунд
+    private final long cacheTtlMillis = TimeUnit.SECONDS.toMillis(10);
 
     public LuckPermsHook(DBans plugin) {
         this.luckPerms = LuckPermsProvider.get();
+        log.debug("LuckPermsHook initialized");
     }
 
     public String getPrimaryGroup(Player player) {

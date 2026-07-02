@@ -1,25 +1,19 @@
 package me.demro.dbans.database;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import me.demro.dbans.DBans;
-import me.demro.dbans.api.adapter.PunishmentAdapter;
 import me.demro.dbans.model.JailPunishment;
 import me.demro.dbans.model.PlayerInfo;
 import me.demro.dbans.model.Punishment;
 import me.demro.dbans.model.PunishmentType;
 import me.demro.dbans.model.Warning;
 import me.demro.dbans.util.CacheManager;
-import me.demro.dlibs.api.EventManager;
-import me.demro.dlibs.api.events.PunishmentCreateEvent;
-import me.demro.dlibs.api.events.PunishmentModifyEvent;
-import me.demro.dlibs.api.events.PunishmentRevokeEvent;
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 
 import java.sql.*;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class MySQLDatabase implements DatabaseManager {
     private final DBans plugin;
@@ -126,7 +120,6 @@ public class MySQLDatabase implements DatabaseManager {
                     "server_name VARCHAR(64) DEFAULT 'unknown'," +
                     "pardoned_by VARCHAR(16)," +
                     "pardoned_at BIGINT)");
-            // ===== НОВАЯ ТАБЛИЦА ДЛЯ УВЕДОМЛЕНИЙ =====
             st.execute("CREATE TABLE IF NOT EXISTS player_notifications (" +
                     "uuid VARCHAR(36) NOT NULL," +
                     "message_key VARCHAR(64) NOT NULL," +
@@ -171,15 +164,6 @@ public class MySQLDatabase implements DatabaseManager {
                     cache.invalidateActivePunishment(punishment.getPlayerUuid(), punishment.getType(), punishment.getServerName(), plugin.getMode());
                     cache.invalidateAllForPlayer(punishment.getPlayerUuid());
                 }
-                try {
-                    EventManager em = plugin.getEventManager();
-                    if (em != null && punishment.isActive()) {
-                        PunishmentCreateEvent event = new PunishmentCreateEvent(new PunishmentAdapter(punishment));
-                        em.callEvent(event);
-                    }
-                } catch (Exception e) {
-                    plugin.getLogger().warning("Failed to call PunishmentCreateEvent: " + e.getMessage());
-                }
                 return;
             } catch (SQLException e) {
                 if (e.getErrorCode() == 1062 || e.getMessage().contains("Duplicate entry")) {
@@ -221,9 +205,6 @@ public class MySQLDatabase implements DatabaseManager {
 
     @Override
     public void updatePunishmentEndTime(String id, long newEndTime) {
-        Punishment oldP = getPunishmentById(id);
-        Long oldEndTime = (oldP != null) ? oldP.getEndTime() : null;
-
         String sql = "UPDATE punishments SET end_time=? WHERE id=?";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -234,21 +215,6 @@ public class MySQLDatabase implements DatabaseManager {
                 Punishment p = getPunishmentById(id);
                 if (p != null) {
                     cache.invalidateActivePunishment(p.getPlayerUuid(), p.getType(), p.getServerName(), plugin.getMode());
-                }
-            }
-            Punishment updated = getPunishmentById(id);
-            if (updated != null) {
-                try {
-                    EventManager em = plugin.getEventManager();
-                    if (em != null) {
-                        PunishmentModifyEvent event = new PunishmentModifyEvent(
-                                new PunishmentAdapter(updated),
-                                null, null, oldEndTime, updated.getEndTime()
-                        );
-                        em.callEvent(event);
-                    }
-                } catch (Exception e) {
-                    plugin.getLogger().warning("Failed to call PunishmentModifyEvent (duration): " + e.getMessage());
                 }
             }
         } catch (SQLException e) {
@@ -384,9 +350,6 @@ public class MySQLDatabase implements DatabaseManager {
 
     @Override
     public void updatePunishmentReason(String id, String newReason) {
-        Punishment oldP = getPunishmentById(id);
-        String oldReason = (oldP != null) ? oldP.getReason() : null;
-
         String sql = "UPDATE punishments SET reason=? WHERE id=?";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -397,21 +360,6 @@ public class MySQLDatabase implements DatabaseManager {
                 Punishment p = getPunishmentById(id);
                 if (p != null) {
                     cache.invalidateActivePunishment(p.getPlayerUuid(), p.getType(), p.getServerName(), plugin.getMode());
-                }
-            }
-            Punishment updated = getPunishmentById(id);
-            if (updated != null) {
-                try {
-                    EventManager em = plugin.getEventManager();
-                    if (em != null) {
-                        PunishmentModifyEvent event = new PunishmentModifyEvent(
-                                new PunishmentAdapter(updated),
-                                oldReason, newReason, null, null
-                        );
-                        em.callEvent(event);
-                    }
-                } catch (Exception e) {
-                    plugin.getLogger().warning("Failed to call PunishmentModifyEvent (reason): " + e.getMessage());
                 }
             }
         } catch (SQLException e) {
@@ -429,15 +377,6 @@ public class MySQLDatabase implements DatabaseManager {
         p.setPardonedAt(System.currentTimeMillis());
         p.setPardonReason(pardonReason);
         updatePunishment(p);
-        try {
-            EventManager em = plugin.getEventManager();
-            if (em != null) {
-                PunishmentRevokeEvent event = new PunishmentRevokeEvent(new PunishmentAdapter(p));
-                em.callEvent(event);
-            }
-        } catch (Exception e) {
-            plugin.getLogger().warning("Failed to call PunishmentRevokeEvent: " + e.getMessage());
-        }
     }
 
     // ==================== IP-БАНЫ ====================
@@ -1323,33 +1262,46 @@ public class MySQLDatabase implements DatabaseManager {
 
     @Override
     public List<Punishment> getAllPunishmentsIncludingJail() {
-        List<Punishment> list = new ArrayList<>(getAllPunishments());
-        // Добавляем джейлы
-        List<JailPunishment> jails = getAllJailsForAllPlayers();
-        for (JailPunishment j : jails) {
-            list.add(mapJailAsPunishment(j));
+        List<Punishment> list = new ArrayList<>();
+        String sql = "SELECT id, player_uuid, player_name, issuer_uuid, issuer_name, type, reason, start_time, end_time, active, server_name, pardoned_by, pardoned_at, pardon_reason FROM punishments " +
+                "UNION ALL " +
+                "SELECT id, player_uuid, player_name, issuer_uuid, issuer_name, 'JAIL' AS type, reason, start_time, end_time, active, server_name, pardoned_by, pardoned_at, NULL AS pardon_reason FROM jail_punishments " +
+                "UNION ALL " +
+                "SELECT id, player_uuid, player_name, issuer_uuid, issuer_name, 'WARNING' AS type, reason, start_time, end_time, active, server_name, pardoned_by, pardoned_at, NULL AS pardon_reason FROM warnings " +
+                "ORDER BY start_time DESC";
+        try (Connection conn = dataSource.getConnection();
+             Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+            while (rs.next()) {
+                list.add(mapPunishmentWithType(rs));
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to get all punishments including jail: " + e.getMessage());
         }
-        // Добавляем варны
-        List<Warning> warnings = getAllWarnings();
-        for (Warning w : warnings) {
-            list.add(mapWarningAsPunishment(w));
-        }
-        list.sort(Comparator.comparingLong(Punishment::getStartTime).reversed());
         return list;
     }
 
     @Override
     public List<Punishment> getPunishmentHistoryIncludingJail(UUID playerUuid) {
-        List<Punishment> list = new ArrayList<>(getPunishmentHistory(playerUuid, true));
-        List<JailPunishment> jails = getAllJailsForPlayer(playerUuid);
-        for (JailPunishment j : jails) {
-            list.add(mapJailAsPunishment(j));
+        List<Punishment> list = new ArrayList<>();
+        String sql = "SELECT id, player_uuid, player_name, issuer_uuid, issuer_name, type, reason, start_time, end_time, active, server_name, pardoned_by, pardoned_at, pardon_reason FROM punishments WHERE player_uuid = ? " +
+                "UNION ALL " +
+                "SELECT id, player_uuid, player_name, issuer_uuid, issuer_name, 'JAIL' AS type, reason, start_time, end_time, active, server_name, pardoned_by, pardoned_at, NULL AS pardon_reason FROM jail_punishments WHERE player_uuid = ? " +
+                "UNION ALL " +
+                "SELECT id, player_uuid, player_name, issuer_uuid, issuer_name, 'WARNING' AS type, reason, start_time, end_time, active, server_name, pardoned_by, pardoned_at, NULL AS pardon_reason FROM warnings WHERE player_uuid = ? " +
+                "ORDER BY start_time DESC";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, playerUuid.toString());
+            ps.setString(2, playerUuid.toString());
+            ps.setString(3, playerUuid.toString());
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                list.add(mapPunishmentWithType(rs));
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to get punishment history including jail: " + e.getMessage());
         }
-        List<Warning> warnings = getAllWarningsForPlayer(playerUuid);
-        for (Warning w : warnings) {
-            list.add(mapWarningAsPunishment(w));
-        }
-        list.sort(Comparator.comparingLong(Punishment::getStartTime).reversed());
         return list;
     }
 
@@ -1408,6 +1360,27 @@ public class MySQLDatabase implements DatabaseManager {
         p.setServerName(jail.getServerName());
         p.setPardonedBy(jail.getPardonedBy());
         p.setPardonedAt(jail.getPardonedAt());
+        return p;
+    }
+
+    private Punishment mapPunishmentWithType(ResultSet rs) throws SQLException {
+        Punishment p = new Punishment();
+        p.setId(rs.getString("id"));
+        p.setPlayerUuid(UUID.fromString(rs.getString("player_uuid")));
+        p.setPlayerName(rs.getString("player_name"));
+        p.setIssuerUuid(UUID.fromString(rs.getString("issuer_uuid")));
+        p.setIssuerName(rs.getString("issuer_name"));
+        p.setType(PunishmentType.valueOf(rs.getString("type")));
+        p.setReason(rs.getString("reason"));
+        p.setStartTime(rs.getLong("start_time"));
+        long end = rs.getLong("end_time");
+        p.setEndTime(rs.wasNull() ? null : end);
+        p.setActive(rs.getBoolean("active"));
+        p.setServerName(rs.getString("server_name"));
+        p.setPardonedBy(rs.getString("pardoned_by"));
+        long pardonedAt = rs.getLong("pardoned_at");
+        p.setPardonedAt(rs.wasNull() ? null : pardonedAt);
+        p.setPardonReason(rs.getString("pardon_reason"));
         return p;
     }
 

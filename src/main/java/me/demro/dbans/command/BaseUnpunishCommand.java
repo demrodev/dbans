@@ -1,10 +1,9 @@
 package me.demro.dbans.command;
 
+import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
-import me.demro.dbans.model.JailPunishment;
-import me.demro.dbans.model.Punishment;
-import me.demro.dbans.model.PunishmentType;
-import me.demro.dbans.model.Warning;
+import me.demro.dlibs.dbans.api.exception.PunishmentNotFoundException;
+import me.demro.dlibs.dbans.api.punishment.*;
 import me.demro.dbans.util.MessageUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -13,69 +12,23 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
+@Slf4j
 public abstract class BaseUnpunishCommand implements CommandExecutor {
+
     protected final DBans plugin;
 
     protected BaseUnpunishCommand(DBans plugin) {
         this.plugin = plugin;
     }
 
-    protected abstract PunishmentType getType();
+    protected abstract PunishmentType getType(); // новый тип
     protected abstract String getFullPermission();
     protected abstract String getOwnPermission();
-    protected abstract Punishment getActivePunishment(UUID targetUuid);
-    protected abstract void pardon(Punishment punishment, CommandSender sender);
-    protected abstract String getBroadcastKey();
-    protected abstract String getBroadcastPermission();
-
-    protected void removeIpBan(Punishment punishment) {}
-
-    private Punishment findPunishmentById(String id) {
-        Punishment p = plugin.getDatabase().getPunishmentById(id);
-        if (p != null) return p;
-
-        JailPunishment jail = plugin.getDatabase().getJailById(id);
-        if (jail != null) {
-            Punishment result = new Punishment();
-            result.setId(jail.getId());
-            result.setPlayerUuid(jail.getPlayerUuid());
-            result.setPlayerName(jail.getPlayerName());
-            result.setIssuerUuid(jail.getIssuerUuid());
-            result.setIssuerName(jail.getIssuerName());
-            result.setType(PunishmentType.JAIL);
-            result.setReason(jail.getReason());
-            result.setStartTime(jail.getStartTime());
-            result.setEndTime(jail.getEndTime());
-            result.setActive(jail.isActive());
-            result.setServerName(jail.getServerName());
-            result.setPardonedBy(jail.getPardonedBy());
-            result.setPardonedAt(jail.getPardonedAt());
-            return result;
-        }
-
-        Warning warning = plugin.getDatabase().getWarningById(id);
-        if (warning != null) {
-            Punishment result = new Punishment();
-            result.setId(warning.getId());
-            result.setPlayerUuid(warning.getPlayerUuid());
-            result.setPlayerName(warning.getPlayerName());
-            result.setIssuerUuid(warning.getIssuerUuid());
-            result.setIssuerName(warning.getIssuerName());
-            result.setType(PunishmentType.WARNING);
-            result.setReason(warning.getReason());
-            result.setStartTime(warning.getStartTime());
-            result.setEndTime(warning.getEndTime());
-            result.setActive(warning.isActive());
-            result.setServerName(warning.getServerName());
-            result.setPardonedBy(warning.getPardonedBy());
-            result.setPardonedAt(warning.getPardonedAt());
-            return result;
-        }
-
-        return null;
-    }
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
@@ -92,38 +45,61 @@ public abstract class BaseUnpunishCommand implements CommandExecutor {
 
         String input = args[0];
 
+        // Если указан ID с #
         if (input.startsWith("#")) {
             String id = input.substring(1);
-            Punishment punishment = findPunishmentById(id);
+            PunishmentId punishmentId = PunishmentId.of(id);
 
-            if (punishment == null || punishment.getType() != getType()) {
+            // Проверяем существование через новый API
+            CompletableFuture<Optional<Punishment>> future = plugin.getApi().punishments().findById(punishmentId);
+            Optional<Punishment> opt = future.join();
+            if (opt.isEmpty()) {
+                MessageUtil.send(sender, "punishment_not_found", "id", id);
+                return true;
+            }
+
+            Punishment punishment = opt.get();
+            if (punishment.type() != getType()) {
                 MessageUtil.send(sender, "punishment_not_found", "id", id);
                 return true;
             }
 
             if (!hasFull && sender instanceof Player) {
                 Player p = (Player) sender;
-                if (!punishment.getPlayerUuid().equals(p.getUniqueId())) {
+                if (!punishment.targetUuid().equals(p.getUniqueId())) {
                     MessageUtil.send(sender, "cannot_unpunish_others", "type", getType().name().toLowerCase());
                     return true;
                 }
             }
 
-            if (getType() == PunishmentType.IPBAN) {
-                removeIpBan(punishment);
-            }
-            if (getType() == PunishmentType.MUTE) {
-                plugin.cancelMuteExpiry(id);
-            }
-
-            pardon(punishment, sender);
-            MessageUtil.broadcast(getBroadcastPermission(), getBroadcastKey(),
-                    "sender", sender.getName(),
-                    "target", punishment.getPlayerName(),
-                    "id", id);
+            // Отмена через новый API
+            PunishmentRevokeRequest revokeRequest = new PunishmentRevokeRequest(
+                    punishmentId,
+                    sender instanceof Player
+                            ? PunishmentIssuer.player(((Player) sender).getUniqueId(), sender.getName())
+                            : PunishmentIssuer.console(),
+                    PunishmentReason.of("Снятие наказания"),
+                    plugin.getServerName(),
+                    PunishmentOptions.defaults()
+            );
+            plugin.getApi().punishments().revoke(revokeRequest)
+                    .whenComplete((v, ex) -> {
+                        if (ex != null) {
+                            if (ex instanceof PunishmentNotFoundException) {
+                                MessageUtil.send(sender, "punishment_not_found", "id", id);
+                            } else {
+                                MessageUtil.send(sender, "error_revoking_punishment", "error", ex.getMessage());
+                                log.error("Error revoking punishment", ex);
+                            }
+                        } else {
+                            MessageUtil.send(sender, "punishment_revoked", "id", id);
+                            log.info("Punishment {} revoked by {}", id, sender.getName());
+                        }
+                    });
             return true;
         }
 
+        // Иначе – по имени игрока
         OfflinePlayer target = Bukkit.getOfflinePlayer(input);
         if (!target.hasPlayedBefore() && !target.isOnline()) {
             MessageUtil.send(sender, "player_not_found", "target", input);
@@ -138,34 +114,60 @@ public abstract class BaseUnpunishCommand implements CommandExecutor {
             }
         }
 
-        Punishment active = getActivePunishment(target.getUniqueId());
-        if (active == null || active.isExpired()) {
+        // Проверяем активное наказание через новый API
+        CompletableFuture<Boolean> hasActiveFuture = plugin.getApi().punishments().hasActive(target.getUniqueId(), getType());
+        if (!hasActiveFuture.join()) {
             String notPunishedKey = switch (getType()) {
                 case BAN -> "not_banned";
                 case MUTE -> "not_muted";
                 case JAIL -> "not_jailed";
                 case WARNING -> "not_warned";
+                case IP_BAN -> "ip_not_banned_for_player";
                 default -> "not_punished";
             };
             MessageUtil.send(sender, notPunishedKey, "target", target.getName());
             return true;
         }
 
-        if (getType() == PunishmentType.MUTE) {
-            plugin.cancelMuteExpiry(active.getId());
+        // Найдём ID активного наказания – через find с query
+        PunishmentQuery query = PunishmentQuery.builder()
+                .targetUuid(target.getUniqueId())
+                .type(getType())
+                .status(PunishmentStatus.ACTIVE)
+                .limit(1)
+                .build();
+        CompletableFuture<List<Punishment>> listFuture = plugin.getApi().punishments().find(query);
+        List<Punishment> list = listFuture.join();
+        if (list.isEmpty()) {
+            MessageUtil.send(sender, "punishment_not_found", "id", "unknown");
+            return true;
         }
-        if (getType() == PunishmentType.IPBAN) {
-            removeIpBan(active);
-        }
-        pardon(active, sender);
-        if (plugin.getProxySyncManager() != null && active != null) {
-            plugin.getProxySyncManager().sendPunishmentRevoke(active);
-        }
-        MessageUtil.broadcast(getBroadcastPermission(), getBroadcastKey(),
-                "sender", sender.getName(),
-                "target", target.getName(),
-                "id", active.getId());
-        return true;
+        Punishment punishment = list.get(0);
+        PunishmentId punishmentId = punishment.id();
 
+        PunishmentRevokeRequest revokeRequest = new PunishmentRevokeRequest(
+                punishmentId,
+                sender instanceof Player
+                        ? PunishmentIssuer.player(((Player) sender).getUniqueId(), sender.getName())
+                        : PunishmentIssuer.console(),
+                PunishmentReason.of("Снятие наказания"),
+                plugin.getServerName(),
+                PunishmentOptions.defaults()
+        );
+        plugin.getApi().punishments().revoke(revokeRequest)
+                .whenComplete((v, ex) -> {
+                    if (ex != null) {
+                        if (ex instanceof PunishmentNotFoundException) {
+                            MessageUtil.send(sender, "punishment_not_found", "id", punishmentId.value());
+                        } else {
+                            MessageUtil.send(sender, "error_revoking_punishment", "error", ex.getMessage());
+                            log.error("Error revoking punishment", ex);
+                        }
+                    } else {
+                        MessageUtil.send(sender, "punishment_revoked", "id", punishmentId.value());
+                        log.info("Punishment {} revoked by {}", punishmentId.value(), sender.getName());
+                    }
+                });
+        return true;
     }
 }

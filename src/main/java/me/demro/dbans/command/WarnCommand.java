@@ -1,16 +1,22 @@
 package me.demro.dbans.command;
 
-import me.demro.dbans.model.PunishmentType;
-import me.demro.dbans.model.Warning;
+import lombok.extern.slf4j.Slf4j;
+import me.demro.dbans.DBans;
+import me.demro.dlibs.dbans.api.exception.PlayerNotFoundException;
+import me.demro.dlibs.dbans.api.player.PlayerIdentity;
+import me.demro.dlibs.dbans.api.punishment.*;
 import me.demro.dbans.util.MessageUtil;
 import me.demro.dbans.util.TimeUtil;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import java.time.Duration;
+
+@Slf4j
 public class WarnCommand extends BasePunishCommand {
 
-    public WarnCommand(me.demro.dbans.DBans plugin) {
+    public WarnCommand(DBans plugin) {
         super(plugin);
     }
 
@@ -41,42 +47,40 @@ public class WarnCommand extends BasePunishCommand {
 
     @Override
     protected void executePunishment(CommandSender sender, OfflinePlayer target, String reason, String finalServer, boolean silent, Long duration) {
-        if (sender instanceof Player) {
-            Player issuer = (Player) sender;
-            long maxDuration = plugin.getLimitsManager().getMaxDuration(issuer, "warn");
-            if (maxDuration > 0 && duration != null && duration > maxDuration) {
-                String group = plugin.getLuckPermsHook().getPrimaryGroup(issuer);
-                MessageUtil.send(sender, "limit_exceed", "max", TimeUtil.formatDuration(maxDuration), "group", group);
-                return;
-            }
+        if (duration == null || duration <= 0) {
+            MessageUtil.send(sender, "invalid_time");
+            return;
         }
 
-        Long endTime = (duration != null && duration > 0) ? System.currentTimeMillis() + duration : null;
-        Warning warning = new Warning(target.getUniqueId(), target.getName(),
-                sender instanceof Player ? ((Player) sender).getUniqueId() : CONSOLE_UUID,
-                sender.getName(), reason, System.currentTimeMillis(), endTime, finalServer);
-        plugin.getDatabase().saveWarning(warning);
-        if (plugin.getProxySyncManager() != null) {
-            plugin.getProxySyncManager().sendPunishmentCreate(warning);
-        }
+        PunishmentCreateRequest request = PunishmentCreateRequest.builder()
+                .target(PlayerIdentity.of(target.getUniqueId(), target.getName()))
+                .type(PunishmentType.WARNING)
+                .reason(PunishmentReason.of(reason))
+                .duration(PunishmentDuration.temporary(Duration.ofMillis(duration)))
+                .issuer(sender instanceof Player
+                        ? PunishmentIssuer.player(((Player) sender).getUniqueId(), sender.getName())
+                        : PunishmentIssuer.console())
+                .serverName(finalServer)
+                .options(PunishmentOptions.builder()
+                        .silent(silent)
+                        .broadcast(!silent)
+                        .notifyTarget(true)
+                        .build())
+                .build();
 
-        Player online = target.getPlayer();
-        if (online != null && finalServer.equals(plugin.getServerName())) {
-            String durationStr = (duration != null && duration > 0) ? TimeUtil.formatDuration(duration) : "навсегда";
-            MessageUtil.send(online, "warn_player",
-                    "sender", sender.getName(), "reason", reason,
-                    "duration", durationStr, "server", finalServer, "id", warning.getId());
-        }
-
-        String permission = silent ? null : "dbans.notify.warning";
-        String durationStr = (duration != null && duration > 0) ? TimeUtil.formatDuration(duration) : "навсегда";
-        MessageUtil.broadcast(permission, "warn_broadcast",
-                "sender", sender.getName(), "target", target.getName(),
-                "reason", reason, "duration", durationStr,
-                "server", finalServer, "id", warning.getId());
-
-        if (online != null && finalServer.equals(plugin.getServerName())) {
-            plugin.getWarnManager().checkAndApplyThresholds(online);
-        }
+        plugin.getApi().punishments().create(request)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        if (ex instanceof PlayerNotFoundException) {
+                            MessageUtil.send(sender, "player_not_found", "target", target.getName());
+                        } else {
+                            MessageUtil.send(sender, "error_creating_punishment", "error", ex.getMessage());
+                            log.error("Error warning player", ex);
+                        }
+                    } else {
+                        log.info("Player {} warned by {} for {}", target.getName(), sender.getName(), TimeUtil.formatDuration(duration));
+                        // Проверка порогов варнов (это делает сервис внутри, но можно дополнительно)
+                    }
+                });
     }
 }

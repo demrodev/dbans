@@ -1,5 +1,6 @@
 package me.demro.dbans.util;
 
+import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import me.demro.dbans.model.Punishment;
 import me.demro.dbans.model.PunishmentType;
@@ -12,11 +13,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 public class PunishmentSyncManager {
     private final DBans plugin;
     private final Map<UUID, String> lastBanId = new HashMap<>();
-    private final Map<UUID, String> lastMuteId = new HashMap<>();          // для блокировки чата
-    private final Map<UUID, String> lastGlobalMuteId = new HashMap<>();   // для уведомлений о новых мутах
+    private final Map<UUID, String> lastMuteId = new HashMap<>();
+    private final Map<UUID, String> lastGlobalMuteId = new HashMap<>();
 
     public PunishmentSyncManager(DBans plugin) {
         this.plugin = plugin;

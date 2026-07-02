@@ -1,5 +1,6 @@
 package me.demro.dbans.command;
 
+import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import me.demro.dbans.model.Punishment;
 import me.demro.dbans.model.PunishmentType;
@@ -8,6 +9,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 
+@Slf4j
 public class DropPunishCommand implements CommandExecutor {
     private final DBans plugin;
 
@@ -32,20 +34,18 @@ public class DropPunishCommand implements CommandExecutor {
                 MessageUtil.send(sender, "no_permission");
                 return true;
             }
-            // Запрос подтверждения
             if (args.length < 2 || !args[1].equalsIgnoreCase("confirm")) {
                 MessageUtil.send(sender, "droppunish_all_confirm");
                 return true;
             }
-            // Очистка всех наказаний
             plugin.getDatabase().deleteAllPunishments();
             plugin.getDatabase().deleteAllJails();
             plugin.getDatabase().deleteAllWarnings();
             MessageUtil.send(sender, "droppunish_all_success");
+            log.warn("All punishments deleted by {}", sender.getName());
             return true;
         }
 
-        //удаление по ID
         String id = args[0];
         Punishment punishment = plugin.getDatabase().getPunishmentById(id);
         if (punishment == null) {
@@ -57,6 +57,7 @@ public class DropPunishCommand implements CommandExecutor {
         }
         plugin.getDatabase().deletePunishment(id);
         MessageUtil.send(sender, "punishment_deleted", "id", id);
+        log.info("Punishment {} deleted by {}", id, sender.getName());
         return true;
     }
 }

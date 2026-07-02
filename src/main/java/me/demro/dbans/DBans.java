@@ -1,7 +1,10 @@
 package me.demro.dbans;
 
-import me.demro.dbans.api.DBansAPIImpl;
-import me.demro.dbans.api.adapter.PunishmentAdapter;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
+import me.demro.dbans.api.impl.DBansAPIImpl;
+import me.demro.dbans.api.adapter.NewPunishmentAdapter;
 import me.demro.dbans.command.*;
 import me.demro.dbans.command.tabcomplete.UniversalTabCompleter;
 import me.demro.dbans.database.*;
@@ -13,10 +16,10 @@ import me.demro.dbans.sync.Constants;
 import me.demro.dbans.sync.ProxySyncManager;
 import me.demro.dbans.util.*;
 import me.demro.dbans.util.geo.GeoIpManager;
-import me.demro.dlibs.api.DBansAPI;
-import me.demro.dlibs.api.DBansProvider;
-import me.demro.dlibs.api.EventManager;
-import me.demro.dlibs.api.events.PunishmentExpireEvent;
+import me.demro.dlibs.dbans.api.DBansAPI;
+import me.demro.dlibs.dbans.api.event.EventOrigin;
+import me.demro.dlibs.dbans.api.event.PunishmentExpireEvent;
+import me.demro.dlibs.dbans.api.spi.DBansServiceRegistrar;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -26,16 +29,21 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.io.File;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
-public class DBans extends JavaPlugin implements DBansProvider.DBansAPIProvider {
+@Slf4j
+@Getter
+@Setter
+public final class DBans extends JavaPlugin {
+
     private DatabaseManager database;
     private LuckPermsHook luckPermsHook;
     private PresetManager presetManager;
     private SelfPunishChecker selfPunishChecker;
-    private ProxySyncManager proxySyncManager;
     private GeoIpManager geoIpManager;
     private LimitsManager limitsManager;
     private final Map<String, BukkitTask> muteExpiryTasks = new HashMap<>();
@@ -46,7 +54,24 @@ public class DBans extends JavaPlugin implements DBansProvider.DBansAPIProvider 
     private File jailConfigFile;
     private PunishmentSyncManager punishmentSyncManager;
     private CacheManager cacheManager;
+    private PlayerCache playerCache;
+    private ProxySyncManager proxySyncManager;
+
+    // НОВОЕ API
     private DBansAPI api;
+
+    // ===== МЕТОДЫ УВЕДОМЛЕНИЙ =====
+    public void addNotification(UUID playerUuid, String messageKey, Map<String, String> placeholders) {
+        database.addNotification(playerUuid, messageKey, placeholders);
+    }
+
+    public List<Map<String, String>> getAndClearNotifications(UUID playerUuid) {
+        return database.getAndClearNotifications(playerUuid);
+    }
+
+    public void clearNotifications(UUID playerUuid) {
+        database.clearNotifications(playerUuid);
+    }
 
     @Override
     public void onEnable() {
@@ -57,10 +82,11 @@ public class DBans extends JavaPlugin implements DBansProvider.DBansAPIProvider 
         String dbType = getConfig().getString("database.type", "h2");
         String mode = getMode();
         if (!"single".equalsIgnoreCase(mode) && "h2".equalsIgnoreCase(dbType)) {
-            getLogger().severe("Mode '" + mode + "' requires MySQL! H2 is not supported. Disabling plugin.");
+            log.error("Mode '{}' requires MySQL! H2 is not supported. Disabling plugin.", mode);
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
+
         try {
             if (dbType.equalsIgnoreCase("mysql")) {
                 database = new MySQLDatabase(this);
@@ -68,10 +94,9 @@ public class DBans extends JavaPlugin implements DBansProvider.DBansAPIProvider 
                 database = new H2Database(this);
             }
             database.init();
-            getLogger().info("Database connected: " + dbType);
+            log.info("Database connected: {}", dbType);
         } catch (SQLException e) {
-            getLogger().severe("Failed to initialize database: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Failed to initialize database: {}", e.getMessage(), e);
             getServer().getPluginManager().disablePlugin(this);
             return;
         } catch (Exception e) {
@@ -79,16 +104,19 @@ public class DBans extends JavaPlugin implements DBansProvider.DBansAPIProvider 
         }
 
         cacheManager = new CacheManager(this);
+        if (database != null) {
+            database.setCacheManager(cacheManager);
+        }
 
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new DBansExpansion(this).register();
-            getLogger().info("PlaceholderAPI expansion registered.");
+            log.info("PlaceholderAPI expansion registered.");
         }
 
         jailConfigFile = new File(getDataFolder(), "jail.yml");
         if (!jailConfigFile.exists()) saveResource("jail.yml", false);
         jailConfig = YamlConfiguration.loadConfiguration(jailConfigFile);
-        getLogger().info("jail.yml loaded.");
+        log.info("jail.yml loaded.");
 
         jailManager = new JailManager(this);
         luckPermsHook = new LuckPermsHook(this);
@@ -99,21 +127,27 @@ public class DBans extends JavaPlugin implements DBansProvider.DBansAPIProvider 
         altAccountManager = new AltAccountManager(this);
         warnManager = new WarnManager(this);
 
-
-        // Инициализация API
+        // ===== ИНИЦИАЛИЗАЦИЯ НОВОГО API =====
         this.api = new DBansAPIImpl(this);
-        getLogger().info("DBans API initialized and ready");
+        DBansServiceRegistrar.register(this, api);
+        log.info("New dBans API registered and ready.");
 
+        if ("sync".equalsIgnoreCase(mode) || "sync_static".equalsIgnoreCase(mode)) {
+            punishmentSyncManager = new PunishmentSyncManager(this);
+        }
+
+        // Прокси-синхронизация
         if (mode.equalsIgnoreCase("sync") || mode.equalsIgnoreCase("sync_static")) {
             proxySyncManager = new ProxySyncManager(this);
             getServer().getMessenger().registerOutgoingPluginChannel(this, Constants.CHANNEL_NAME);
             getServer().getMessenger().registerIncomingPluginChannel(this, Constants.CHANNEL_NAME, proxySyncManager);
-            getLogger().info("✅ Proxy sync manager registered.");
+            log.info("✅ Proxy sync manager registered.");
         } else {
-            getLogger().info("ℹ️ Proxy sync disabled (mode=" + mode + ")");
+            log.info("ℹ️ Proxy sync disabled (mode={})", mode);
         }
 
-        getLogger().info("Outgoing channel: " + Constants.CHANNEL_NAME + " registered. Incoming channel: " + Constants.CHANNEL_NAME + " registered.");
+        // Проверка и деактивация истекших мутов при загрузке
+        checkAndDeactivateExpiredMutes();
 
         // Регистрация команд
         getCommand("ban").setExecutor(new BanCommand(this));
@@ -161,100 +195,142 @@ public class DBans extends JavaPlugin implements DBansProvider.DBansAPIProvider 
             getCommand(cmd).setTabCompleter(universalTabCompleter);
         }
 
+        // Планирование активных мутов
         rescheduleAllMutes();
 
-        getLogger().info("DBans v" + getPluginMeta().getVersion() + " by demrodev enabled");
+        log.info("DBans v{} by demrodev enabled", getPluginMeta().getVersion());
 
         int pluginId = 32027;
-        Metrics metrics = new Metrics(this, pluginId);
+        new Metrics(this, pluginId);
+
+        playerCache = new PlayerCache();
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            playerCache.update(p);
+        }
     }
 
     @Override
     public void onDisable() {
-        for (BukkitTask task : muteExpiryTasks.values()) task.cancel();
+        for (BukkitTask task : muteExpiryTasks.values()) {
+            task.cancel();
+        }
         muteExpiryTasks.clear();
-        if (database != null) database.close();
-        getLogger().info("DBans disabled");
+
         if (proxySyncManager != null) {
             getServer().getMessenger().unregisterOutgoingPluginChannel(this, Constants.CHANNEL_NAME);
             getServer().getMessenger().unregisterIncomingPluginChannel(this, Constants.CHANNEL_NAME, proxySyncManager);
             proxySyncManager = null;
         }
+
+        // Отмена регистрации API
+        if (api != null) {
+            DBansServiceRegistrar.unregister(api);
+            api = null;
+        }
+
+        if (database != null) {
+            database.close();
+        }
+        log.info("DBans disabled");
     }
 
-    // Геттеры
-    public DatabaseManager getDatabase() { return database; }
-    public CacheManager getCacheManager() { return cacheManager; }
-    public LuckPermsHook getLuckPermsHook() { return luckPermsHook; }
-    public PresetManager getPresetManager() { return presetManager; }
-    public SelfPunishChecker getSelfPunishChecker() { return selfPunishChecker; }
-    public ProxySyncManager getProxySyncManager() { return proxySyncManager; }
-    public GeoIpManager getGeoIpManager() { return geoIpManager; }
-    public LimitsManager getLimitsManager() { return limitsManager; }
-    public String getServerName() { return getConfig().getString("server_name", "unknown"); }
-    public String getMode() { return getConfig().getString("mode", "single"); }
-    public JailManager getJailManager() { return jailManager; }
-    public YamlConfiguration getJailConfig() { return jailConfig; }
-    public AltAccountManager getAltAccountManager() { return altAccountManager; }
-    public WarnManager getWarnManager() { return warnManager; }
-    public PunishmentSyncManager getPunishmentSyncManager() { return punishmentSyncManager; }
+    // ===== МЕТОД ДЛЯ ДЕАКТИВАЦИИ ИСТЕКШИХ МУТОВ =====
+    private void checkAndDeactivateExpiredMutes() {
+        List<Punishment> activeMutes = database.getAllActivePunishmentsByType(PunishmentType.MUTE);
+        long now = System.currentTimeMillis();
+        boolean anyExpired = false;
 
-    // Реализация метода интерфейса DBansProvider.DBansAPIProvider
-    @Override
-    public DBansAPI getAPI() {
-        return api;
+        for (Punishment mute : activeMutes) {
+            if (mute.getEndTime() != null && mute.getEndTime() <= now) {
+                mute.setActive(false);
+                database.updatePunishment(mute);
+                log.info("🔁 Deactivated expired mute: {} for {}", mute.getId(), mute.getPlayerName());
+                anyExpired = true;
+
+                cacheManager.invalidateMuteCache(mute.getPlayerUuid());
+
+                try {
+                    PunishmentExpireEvent event = new PunishmentExpireEvent(
+                            new NewPunishmentAdapter(mute),
+                            EventOrigin.INTERNAL,
+                            Instant.now(),
+                            false
+                    );
+                    Bukkit.getPluginManager().callEvent(event);
+                } catch (Exception e) {
+                    log.warn("Failed to call new PunishmentExpireEvent: {}", e.getMessage());
+                }
+
+                if (proxySyncManager != null) {
+                    proxySyncManager.sendPunishmentExpire(mute);
+                }
+
+                Player p = Bukkit.getPlayer(mute.getPlayerUuid());
+                if (p != null && p.isOnline()) {
+                    MessageUtil.send(p, "expire_mute", "id", mute.getId());
+                }
+            }
+        }
+
+        if (anyExpired) {
+            log.info("✅ Проверка истекших мутов завершена. Некоторые муты были деактивированы.");
+        } else {
+            log.info("✅ Истекших мутов не обнаружено.");
+        }
     }
 
-    public EventManager getEventManager() {
-        return api != null ? api.getEventManager() : null;
-    }
-
+    // ===== МЕТОДЫ ДЛЯ РАБОТЫ С МУТАМИ =====
     public void scheduleMuteExpiry(Punishment mute) {
         if (mute.getEndTime() == null) return;
         long delay = mute.getEndTime() - System.currentTimeMillis();
         if (delay <= 0) {
             mute.setActive(false);
             database.updatePunishment(mute);
-            if (proxySyncManager != null) {
-                proxySyncManager.sendPunishmentExpire(mute);
-            }
+            cacheManager.invalidateMuteCache(mute.getPlayerUuid());
+
             Player p = Bukkit.getPlayer(mute.getPlayerUuid());
             if (p != null && p.isOnline()) {
-                String rawMsg = MessageUtil.getRawMessage("tempmute_expired");
-                if (rawMsg != null) p.sendMessage(MessageUtil.deserialize(rawMsg));
+                MessageUtil.send(p, "expire_mute", "id", mute.getId());
             }
             try {
-                EventManager em = getEventManager();
-                if (em != null) {
-                    PunishmentExpireEvent event = new PunishmentExpireEvent(
-                            new PunishmentAdapter(mute)
-                    );
-                    em.callEvent(event);
-                }
+                PunishmentExpireEvent event = new PunishmentExpireEvent(
+                        new NewPunishmentAdapter(mute),
+                        EventOrigin.INTERNAL,
+                        Instant.now(),
+                        false
+                );
+                Bukkit.getPluginManager().callEvent(event);
             } catch (Exception e) {
-                getLogger().warning("Failed to call PunishmentExpireEvent: " + e.getMessage());
+                log.warn("Failed to call new PunishmentExpireEvent: {}", e.getMessage());
+            }
+            if (proxySyncManager != null) {
+                proxySyncManager.sendPunishmentExpire(mute);
             }
             return;
         }
         BukkitTask task = getServer().getScheduler().runTaskLater(this, () -> {
             mute.setActive(false);
             database.updatePunishment(mute);
+            cacheManager.invalidateMuteCache(mute.getPlayerUuid());
+
             Player p = Bukkit.getPlayer(mute.getPlayerUuid());
             if (p != null && p.isOnline()) {
-                String rawMsg = MessageUtil.getRawMessage("tempmute_expired");
-                if (rawMsg != null) p.sendMessage(MessageUtil.deserialize(rawMsg));
+                MessageUtil.send(p, "expire_mute", "id", mute.getId());
             }
             muteExpiryTasks.remove(mute.getId());
             try {
-                EventManager em = getEventManager();
-                if (em != null) {
-                    PunishmentExpireEvent event = new PunishmentExpireEvent(
-                            new PunishmentAdapter(mute)
-                    );
-                    em.callEvent(event);
-                }
+                PunishmentExpireEvent event = new PunishmentExpireEvent(
+                        new NewPunishmentAdapter(mute),
+                        EventOrigin.INTERNAL,
+                        Instant.now(),
+                        false
+                );
+                Bukkit.getPluginManager().callEvent(event);
             } catch (Exception e) {
-                getLogger().warning("Failed to call PunishmentExpireEvent: " + e.getMessage());
+                log.warn("Failed to call new PunishmentExpireEvent: {}", e.getMessage());
+            }
+            if (proxySyncManager != null) {
+                proxySyncManager.sendPunishmentExpire(mute);
             }
         }, delay / 50);
         muteExpiryTasks.put(mute.getId(), task);
@@ -266,20 +342,41 @@ public class DBans extends JavaPlugin implements DBansProvider.DBansAPIProvider 
     }
 
     private void rescheduleAllMutes() {
-        for (BukkitTask task : muteExpiryTasks.values()) task.cancel();
+        for (BukkitTask task : muteExpiryTasks.values()) {
+            task.cancel();
+        }
         muteExpiryTasks.clear();
         List<Punishment> activeMutes = database.getAllActivePunishmentsByType(PunishmentType.MUTE);
         for (Punishment mute : activeMutes) {
-            if (mute.getEndTime() != null && mute.isActive()) {
+            if (mute.getEndTime() != null && mute.isActive() && mute.getEndTime() > System.currentTimeMillis()) {
                 scheduleMuteExpiry(mute);
             }
         }
     }
 
+    // ===== ГЕТТЕРЫ =====
+    public String getServerName() {
+        return getConfig().getString("server_name", "unknown");
+    }
+
+    public String getMode() {
+        return getConfig().getString("mode", "single");
+    }
+
+    // Новый геттер API
+    public DBansAPI getApi() {
+        return api;
+    }
+
+    // ===== ПЕРЕЗАГРУЗКА КОНФИГУРАЦИИ JAIL =====
     public void reloadJailConfig() {
-        if (jailConfigFile == null) jailConfigFile = new File(getDataFolder(), "jail.yml");
+        if (jailConfigFile == null) {
+            jailConfigFile = new File(getDataFolder(), "jail.yml");
+        }
         jailConfig = YamlConfiguration.loadConfiguration(jailConfigFile);
-        if (jailManager != null) jailManager.reload();
-        getLogger().info("jail.yml reloaded");
+        if (jailManager != null) {
+            jailManager.reload();
+        }
+        log.info("jail.yml reloaded");
     }
 }

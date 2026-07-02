@@ -1,10 +1,20 @@
 package me.demro.dbans.model;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder(toBuilder = true)
 public class Punishment {
-    private String id;
+    @Builder.Default
+    private String id = generateId();
     private UUID playerUuid;
     private String playerName;
     private UUID issuerUuid;
@@ -30,67 +40,6 @@ public class Punishment {
         }
         return sb.toString();
     }
-
-    public Punishment() {
-        this.id = generateId();
-    }
-
-    public Punishment(UUID playerUuid, String playerName, UUID issuerUuid, String issuerName,
-                      PunishmentType type, String reason, long startTime, Long endTime, String serverName) {
-        this.id = generateId();
-        this.playerUuid = playerUuid;
-        this.playerName = playerName;
-        this.issuerUuid = issuerUuid;
-        this.issuerName = issuerName;
-        this.type = type;
-        this.reason = reason;
-        this.startTime = startTime;
-        this.endTime = endTime;
-        this.active = true;
-        this.serverName = serverName;
-    }
-
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
-
-    public UUID getPlayerUuid() { return playerUuid; }
-    public void setPlayerUuid(UUID playerUuid) { this.playerUuid = playerUuid; }
-
-    public String getPlayerName() { return playerName; }
-    public void setPlayerName(String playerName) { this.playerName = playerName; }
-
-    public UUID getIssuerUuid() { return issuerUuid; }
-    public void setIssuerUuid(UUID issuerUuid) { this.issuerUuid = issuerUuid; }
-
-    public String getIssuerName() { return issuerName; }
-    public void setIssuerName(String issuerName) { this.issuerName = issuerName; }
-
-    public PunishmentType getType() { return type; }
-    public void setType(PunishmentType type) { this.type = type; }
-
-    public String getReason() { return reason; }
-    public void setReason(String reason) { this.reason = reason; }
-
-    public long getStartTime() { return startTime; }
-    public void setStartTime(long startTime) { this.startTime = startTime; }
-
-    public Long getEndTime() { return endTime; }
-    public void setEndTime(Long endTime) { this.endTime = endTime; }
-
-    public boolean isActive() { return active; }
-    public void setActive(boolean active) { this.active = active; }
-
-    public String getPardonedBy() { return pardonedBy; }
-    public void setPardonedBy(String pardonedBy) { this.pardonedBy = pardonedBy; }
-
-    public Long getPardonedAt() { return pardonedAt; }
-    public void setPardonedAt(Long pardonedAt) { this.pardonedAt = pardonedAt; }
-
-    public String getPardonReason() { return pardonReason; }
-    public void setPardonReason(String pardonReason) { this.pardonReason = pardonReason; }
-
-    public String getServerName() { return serverName; }
-    public void setServerName(String serverName) { this.serverName = serverName; }
 
     public boolean isExpired() {
         return endTime != null && System.currentTimeMillis() > endTime;

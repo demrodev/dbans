@@ -1,9 +1,11 @@
 package me.demro.dbans.util;
 
+import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+@Slf4j
 public class SelfPunishChecker {
     private final DBans plugin;
 

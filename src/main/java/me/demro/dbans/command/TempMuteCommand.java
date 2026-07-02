@@ -1,16 +1,22 @@
 package me.demro.dbans.command;
 
-import me.demro.dbans.model.Punishment;
-import me.demro.dbans.model.PunishmentType;
+import lombok.extern.slf4j.Slf4j;
+import me.demro.dbans.DBans;
+import me.demro.dlibs.dbans.api.exception.PlayerNotFoundException;
+import me.demro.dlibs.dbans.api.player.PlayerIdentity;
+import me.demro.dlibs.dbans.api.punishment.*;
 import me.demro.dbans.util.MessageUtil;
 import me.demro.dbans.util.TimeUtil;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import java.time.Duration;
+
+@Slf4j
 public class TempMuteCommand extends BasePunishCommand {
 
-    public TempMuteCommand(me.demro.dbans.DBans plugin) {
+    public TempMuteCommand(DBans plugin) {
         super(plugin);
     }
 
@@ -46,41 +52,34 @@ public class TempMuteCommand extends BasePunishCommand {
             return;
         }
 
-        if (sender instanceof Player) {
-            Player issuer = (Player) sender;
-            long maxDuration = plugin.getLimitsManager().getMaxDuration(issuer, "tempmute");
-            if (maxDuration > 0 && duration > maxDuration) {
-                String group = plugin.getLuckPermsHook().getPrimaryGroup(issuer);
-                MessageUtil.send(sender, "limit_exceed", "max", TimeUtil.formatDuration(maxDuration), "group", group);
-                return;
-            }
-        }
+        PunishmentCreateRequest request = PunishmentCreateRequest.builder()
+                .target(PlayerIdentity.of(target.getUniqueId(), target.getName()))
+                .type(PunishmentType.MUTE)
+                .reason(PunishmentReason.of(reason))
+                .duration(PunishmentDuration.temporary(Duration.ofMillis(duration)))
+                .issuer(sender instanceof Player
+                        ? PunishmentIssuer.player(((Player) sender).getUniqueId(), sender.getName())
+                        : PunishmentIssuer.console())
+                .serverName(finalServer)
+                .options(PunishmentOptions.builder()
+                        .silent(silent)
+                        .broadcast(!silent)
+                        .notifyTarget(true)
+                        .build())
+                .build();
 
-        long endTime = System.currentTimeMillis() + duration;
-        Punishment mute = new Punishment(target.getUniqueId(), target.getName(),
-                sender instanceof Player ? ((Player) sender).getUniqueId() : CONSOLE_UUID,
-                sender.getName(), PunishmentType.MUTE, reason, System.currentTimeMillis(), endTime, finalServer);
-        plugin.getDatabase().savePunishment(mute);
-        // ======== ВСТАВКА ========
-        if (plugin.getProxySyncManager() != null) {
-            plugin.getProxySyncManager().sendPunishmentCreate(mute);
-            plugin.getLogger().info("📤 [Sync] Sent punishment_create for " + mute.getId());
-        }
-        // ==========================
-        plugin.scheduleMuteExpiry(mute);
-
-        Player online = target.getPlayer();
-        if (online != null && finalServer.equals(plugin.getServerName())) {
-            MessageUtil.send(online, "tempmute_player",
-                    "sender", sender.getName(), "reason", reason,
-                    "duration", TimeUtil.formatDuration(duration),
-                    "server", finalServer, "id", mute.getId());
-        }
-
-        String permission = silent ? null : "dbans.notify.mute";
-        MessageUtil.broadcast(permission, "tempmute_broadcast",
-                "sender", sender.getName(), "target", target.getName(),
-                "reason", reason, "duration", TimeUtil.formatDuration(duration),
-                "server", finalServer, "id", mute.getId());
+        plugin.getApi().punishments().create(request)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        if (ex instanceof PlayerNotFoundException) {
+                            MessageUtil.send(sender, "player_not_found", "target", target.getName());
+                        } else {
+                            MessageUtil.send(sender, "error_creating_punishment", "error", ex.getMessage());
+                            log.error("Error creating tempmute", ex);
+                        }
+                    } else {
+                        log.info("Player {} tempmuted by {} for {}", target.getName(), sender.getName(), TimeUtil.formatDuration(duration));
+                    }
+                });
     }
 }

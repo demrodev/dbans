@@ -1,10 +1,10 @@
 package me.demro.dbans.command;
 
+import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import me.demro.dbans.model.Punishment;
 import me.demro.dbans.model.PunishmentType;
 import me.demro.dbans.util.MessageUtil;
-import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -14,6 +14,7 @@ import org.bukkit.entity.Player;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 public class BantwaccsCommand implements CommandExecutor {
     private final DBans plugin;
 
@@ -33,7 +34,7 @@ public class BantwaccsCommand implements CommandExecutor {
         }
         String targetName = args[0];
         String reason = String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length));
-        OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
+        OfflinePlayer target = plugin.getPlayerCache().getOfflinePlayer(targetName);
         if (!target.hasPlayedBefore() && !target.isOnline()) {
             MessageUtil.send(sender, "player_not_found", "target", targetName);
             return true;
@@ -46,16 +47,24 @@ public class BantwaccsCommand implements CommandExecutor {
         StringBuilder bannedList = new StringBuilder();
         UUID issuerUuid = (sender instanceof Player) ? ((Player) sender).getUniqueId() : UUID.nameUUIDFromBytes("CONSOLE".getBytes());
         for (String alt : alts) {
-            OfflinePlayer altPlayer = Bukkit.getOfflinePlayer(alt);
-            Punishment ban = new Punishment(altPlayer.getUniqueId(), alt, issuerUuid, sender.getName(),
-                    PunishmentType.BAN, reason, System.currentTimeMillis(), null, plugin.getServerName());
+            OfflinePlayer altPlayer = plugin.getPlayerCache().getOfflinePlayer(alt);
+            Punishment ban = Punishment.builder()
+                    .playerUuid(altPlayer.getUniqueId())
+                    .playerName(alt)
+                    .issuerUuid(issuerUuid)
+                    .issuerName(sender.getName())
+                    .type(PunishmentType.BAN)
+                    .reason(reason)
+                    .startTime(System.currentTimeMillis())
+                    .endTime(null)
+                    .active(true)
+                    .serverName(plugin.getServerName())
+                    .build();
             plugin.getDatabase().savePunishment(ban);
-            // ======== ВСТАВКА ========
             if (plugin.getProxySyncManager() != null) {
                 plugin.getProxySyncManager().sendPunishmentCreate(ban);
-                plugin.getLogger().info("📤 [Sync] Sent punishment_create for " + ban.getId());
+                log.info("📤 [Sync] Sent punishment_create for {}", ban.getId());
             }
-            // ==========================
             bannedList.append(alt).append(" (#").append(ban.getId()).append("), ");
             Player online = altPlayer.getPlayer();
             if (online != null) {

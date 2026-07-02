@@ -1,15 +1,20 @@
 package me.demro.dbans.command;
 
-import me.demro.dbans.model.Punishment;
-import me.demro.dbans.model.PunishmentType;
+import lombok.extern.slf4j.Slf4j;
+import me.demro.dbans.DBans;
+import me.demro.dlibs.dbans.api.exception.InvalidPunishmentRequestException;
+import me.demro.dlibs.dbans.api.exception.PlayerNotFoundException;
+import me.demro.dlibs.dbans.api.player.PlayerIdentity;
+import me.demro.dlibs.dbans.api.punishment.*;
 import me.demro.dbans.util.MessageUtil;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+@Slf4j
 public class BanCommand extends BasePunishCommand {
 
-    public BanCommand(me.demro.dbans.DBans plugin) {
+    public BanCommand(DBans plugin) {
         super(plugin);
     }
 
@@ -30,31 +35,40 @@ public class BanCommand extends BasePunishCommand {
 
     @Override
     protected void executePunishment(CommandSender sender, OfflinePlayer target, String reason, String finalServer, boolean silent, Long duration) {
-        Punishment ban = new Punishment(target.getUniqueId(), target.getName(),
-                sender instanceof Player ? ((Player) sender).getUniqueId() : CONSOLE_UUID,
-                sender.getName(), PunishmentType.BAN, reason, System.currentTimeMillis(), null, finalServer);
-        plugin.getDatabase().savePunishment(ban);
-        // ======== ВСТАВКА ========
-        if (plugin.getProxySyncManager() != null) {
-            plugin.getProxySyncManager().sendPunishmentCreate(ban);
-            plugin.getLogger().info("📤 [Sync] Sent punishment_create for " + ban.getId());
-        }
-        // ==========================
+        PunishmentCreateRequest request = PunishmentCreateRequest.builder()
+                .target(PlayerIdentity.of(target.getUniqueId(), target.getName()))
+                .type(PunishmentType.BAN)
+                .reason(PunishmentReason.of(reason))
+                .duration(PunishmentDuration.permanent())
+                .issuer(sender instanceof Player
+                        ? PunishmentIssuer.player(((Player) sender).getUniqueId(), sender.getName())
+                        : PunishmentIssuer.console())
+                .serverName(finalServer)
+                .options(PunishmentOptions.builder()
+                        .silent(silent)
+                        .broadcast(!silent)
+                        .notifyTarget(true)
+                        .build())
+                .build();
 
-        Player online = target.getPlayer();
-        if (online != null && finalServer.equals(plugin.getServerName())) {
-            String kickMsg = MessageUtil.getRawMessage("ban_player");
-            if (kickMsg == null) kickMsg = "&c✖ Вы были забанены навсегда.\nПричина: %reason%\nАдминистратор: %sender%\nСервер: %server%\nID: #%id%";
-            kickMsg = kickMsg.replace("%reason%", reason)
-                    .replace("%sender%", sender.getName())
-                    .replace("%server%", finalServer)
-                    .replace("%id%", ban.getId());
-            online.kick(MessageUtil.deserializeForKick(kickMsg));
-        }
+        plugin.getApi().punishments().create(request)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        handleError(sender, ex);
+                    } else {
+                        log.info("Player {} banned by {} with ID {}", target.getName(), sender.getName(), result.punishment().shortId());
+                    }
+                });
+    }
 
-        String permission = silent ? null : "dbans.notify.ban";
-        MessageUtil.broadcast(permission, "ban_broadcast",
-                "sender", sender.getName(), "target", target.getName(),
-                "reason", reason, "server", finalServer, "id", ban.getId());
+    private void handleError(CommandSender sender, Throwable ex) {
+        if (ex instanceof PlayerNotFoundException) {
+            MessageUtil.send(sender, "player_not_found", "target", "unknown");
+        } else if (ex instanceof InvalidPunishmentRequestException) {
+            MessageUtil.send(sender, "invalid_request", "error", ex.getMessage());
+        } else {
+            MessageUtil.send(sender, "error_creating_punishment", "error", ex.getMessage());
+            log.error("Error creating punishment", ex);
+        }
     }
 }

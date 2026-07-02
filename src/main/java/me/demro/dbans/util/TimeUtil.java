@@ -1,10 +1,13 @@
 package me.demro.dbans.util;
 
+import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
+
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Slf4j
 public class TimeUtil {
     private static DBans plugin;
     private static final Pattern TIME_PATTERN = Pattern.compile("(\\d+)([smhd])");

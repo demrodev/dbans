@@ -1,5 +1,6 @@
 package me.demro.dbans.util;
 
+import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import me.demro.dbans.model.JailPunishment;
 import me.demro.dbans.model.Punishment;
@@ -17,6 +18,7 @@ import org.bukkit.scheduler.BukkitTask;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 public class JailManager {
     private final DBans plugin;
     private final Map<UUID, BukkitTask> phraseTasks = new ConcurrentHashMap<>();
@@ -33,7 +35,7 @@ public class JailManager {
         this.plugin = plugin;
         this.citizensEnabled = Bukkit.getPluginManager().getPlugin("Citizens") != null;
         if (!citizensEnabled) {
-            plugin.getLogger().warning("Citizens2 not found! Using ArmorStand for jail NPC.");
+            log.warn("Citizens2 not found! Using ArmorStand for jail NPC.");
         }
         this.jailEnabled = plugin.getJailConfig().getBoolean("enabled", true);
         this.randomRange = plugin.getJailConfig().getInt("random_range", 500);
@@ -42,9 +44,9 @@ public class JailManager {
             createJailWorld();
             startExpiryChecker();
             refreshActiveJailCache();
-            plugin.getLogger().info("Jail system enabled.");
+            log.info("Jail system enabled.");
         } else {
-            plugin.getLogger().info("Jail system is disabled in jail.yml. No resources will be consumed.");
+            log.info("Jail system is disabled in jail.yml. No resources will be consumed.");
         }
     }
 
@@ -101,7 +103,6 @@ public class JailManager {
             return null;
         }
 
-        // Проверка через кэш
         if (activeJailCache.containsKey(player.getUniqueId())) {
             MessageUtil.send(player, "already_jailed");
             return null;
@@ -129,7 +130,6 @@ public class JailManager {
         player.teleport(jailLoc);
 
         applyJailEffects(player);
-
         startLightning(player);
 
         String npcName = MessageUtil.colorize(plugin.getJailConfig().getString("npc.name", "&cТюремщик"));
@@ -143,36 +143,38 @@ public class JailManager {
         String id = Punishment.generateId();
         long start = System.currentTimeMillis();
         Long end = (durationMillis == null || durationMillis <= 0) ? null : start + durationMillis;
-        JailPunishment jail = new JailPunishment();
-        jail.setId(id);
-        jail.setPlayerUuid(player.getUniqueId());
-        jail.setPlayerName(player.getName());
-        jail.setIssuerUuid(UUID.nameUUIDFromBytes("CONSOLE".getBytes()));
-        jail.setIssuerName(issuerName);
-        jail.setReason(reason);
-        jail.setStartTime(start);
-        jail.setEndTime(end);
-        jail.setActive(true);
-        jail.setServerName(plugin.getServerName());
-        jail.setPreviousLocation(previousLocation);
-        jail.setJailLocation(jailLoc);
+        JailPunishment jail = JailPunishment.builder()
+                .id(id)
+                .playerUuid(player.getUniqueId())
+                .playerName(player.getName())
+                .issuerUuid(UUID.nameUUIDFromBytes("CONSOLE".getBytes()))
+                .issuerName(issuerName)
+                .reason(reason)
+                .startTime(start)
+                .endTime(end)
+                .active(true)
+                .serverName(plugin.getServerName())
+                .previousLocation(previousLocation)
+                .jailLocation(jailLoc)
+                .build();
         plugin.getDatabase().saveJail(jail);
         if (plugin.getProxySyncManager() != null) {
             plugin.getProxySyncManager().sendPunishmentCreate(jail);
         }
         if (plugin.getProxySyncManager() != null) {
-            Punishment p = new Punishment();
-            p.setId(jail.getId());
-            p.setPlayerUuid(jail.getPlayerUuid());
-            p.setPlayerName(jail.getPlayerName());
-            p.setIssuerUuid(jail.getIssuerUuid());
-            p.setIssuerName(jail.getIssuerName());
-            p.setType(PunishmentType.JAIL);
-            p.setReason(jail.getReason());
-            p.setStartTime(jail.getStartTime());
-            p.setEndTime(jail.getEndTime());
-            p.setActive(jail.isActive());
-            p.setServerName(jail.getServerName());
+            Punishment p = Punishment.builder()
+                    .id(jail.getId())
+                    .playerUuid(jail.getPlayerUuid())
+                    .playerName(jail.getPlayerName())
+                    .issuerUuid(jail.getIssuerUuid())
+                    .issuerName(jail.getIssuerName())
+                    .type(PunishmentType.JAIL)
+                    .reason(jail.getReason())
+                    .startTime(jail.getStartTime())
+                    .endTime(jail.getEndTime())
+                    .active(jail.isActive())
+                    .serverName(jail.getServerName())
+                    .build();
             plugin.getProxySyncManager().sendPunishmentCreate(p);
         }
         activeJailCache.put(player.getUniqueId(), jail);
@@ -206,7 +208,7 @@ public class JailManager {
                 npc.setProtected(true);
                 return npc;
             } catch (Throwable e) {
-                plugin.getLogger().warning("Failed to create Citizens NPC: " + e.getMessage());
+                log.warn("Failed to create Citizens NPC: {}", e.getMessage());
                 return null;
             }
         } else {
@@ -295,7 +297,7 @@ public class JailManager {
                 player.teleport(previous);
             } else {
                 player.teleport(player.getWorld().getSpawnLocation());
-                plugin.getLogger().warning("Previous location is null for " + player.getName() + ", teleported to spawn.");
+                log.warn("Previous location is null for {}, teleported to spawn.", player.getName());
             }
         } finally {
             teleportAllowed.remove(player.getUniqueId());

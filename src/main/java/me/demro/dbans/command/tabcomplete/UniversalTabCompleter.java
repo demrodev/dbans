@@ -1,5 +1,6 @@
 package me.demro.dbans.command.tabcomplete;
 
+import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import me.demro.dbans.model.JailPunishment;
 import me.demro.dbans.model.Punishment;
@@ -17,12 +18,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+@Slf4j
 public class UniversalTabCompleter implements TabCompleter {
     private final DBans plugin;
     private final Map<String, List<String>> presetCache = new ConcurrentHashMap<>();
     private final Map<String, List<String>> activeIdsCache = new ConcurrentHashMap<>();
     private final Map<String, Long> cacheTime = new ConcurrentHashMap<>();
-    private final long cacheTtlMillis = TimeUnit.SECONDS.toMillis(5); // 5 секунд
+    private final long cacheTtlMillis = TimeUnit.SECONDS.toMillis(5);
 
     public UniversalTabCompleter(DBans plugin) {
         this.plugin = plugin;
@@ -178,6 +180,7 @@ public class UniversalTabCompleter implements TabCompleter {
         try {
             presets = plugin.getPresetManager().getPresetNamesByType(commandType);
         } catch (Exception e) {
+            log.warn("Failed to get preset names for {}: {}", commandType, e.getMessage());
             presets = new ArrayList<>();
         }
         presetCache.put(cacheKey, presets);

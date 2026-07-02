@@ -1,11 +1,14 @@
 package me.demro.dbans.command;
 
+import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
-import me.demro.dbans.model.Punishment;
-import me.demro.dbans.model.PunishmentType;
 import me.demro.dbans.util.MessageUtil;
 import me.demro.dbans.util.PresetManager;
 import me.demro.dbans.util.TimeUtil;
+import me.demro.dlibs.dbans.api.exception.DBansException;
+import me.demro.dlibs.dbans.api.exception.PlayerNotFoundException;
+import me.demro.dlibs.dbans.api.player.PlayerIdentity;
+import me.demro.dlibs.dbans.api.punishment.*;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
@@ -13,15 +16,14 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
-/**
- * Абстрактный базовый класс для всех команд наказания (ban, mute, kick, jail, warn).
- * Содержит общую логику: парсинг флагов, проверки прав, иммунитетов, кулдаунов,
- * обработку пресетов, проверку существующего наказания и т.д.
- * Специфическая логика каждого наказания реализуется в методе executePunishment().
- */
+@Slf4j
 public abstract class BasePunishCommand implements CommandExecutor {
+
     protected final DBans plugin;
     protected static final UUID CONSOLE_UUID = UUID.nameUUIDFromBytes("CONSOLE".getBytes());
 
@@ -29,18 +31,13 @@ public abstract class BasePunishCommand implements CommandExecutor {
         this.plugin = plugin;
     }
 
-    protected abstract PunishmentType getType();          // тип наказания (BAN, MUTE, KICK, JAIL, WARNING)
-    protected abstract String getPermission();           // базовое разрешение (punishment.ban и т.п.)
-    protected abstract boolean isPermanent();             // является ли наказание перманентным
+    protected abstract PunishmentType getType(); // новый тип
+    protected abstract String getPermission();
+    protected abstract boolean isPermanent();
     protected abstract void executePunishment(CommandSender sender, OfflinePlayer target, String reason, String finalServer, boolean silent, Long duration);
 
     protected Long parseDuration(String[] args, int startIndex) {
-        return null; // по умолчанию – без длительности
-    }
-
-    protected boolean hasActivePunishment(OfflinePlayer target, String mode) {
-        Punishment existing = plugin.getDatabase().getActivePunishment(target.getUniqueId(), getType(), plugin.getServerName(), mode);
-        return existing != null && !existing.isExpired();
+        return null;
     }
 
     @Override
@@ -54,14 +51,23 @@ public abstract class BasePunishCommand implements CommandExecutor {
 
         boolean silent = false;
         String targetServer = null;
-        String[] cleaned = new String[args.length];
-        int cleanedIdx = 0;
+        List<String> filteredArgs = new ArrayList<>();
+
         for (String arg : args) {
-            if (arg.equalsIgnoreCase("-s")) silent = true;
-            else if (arg.toLowerCase().startsWith("server:")) targetServer = arg.substring(7);
-            else cleaned[cleanedIdx++] = arg;
+            if (arg.equalsIgnoreCase("-s")) {
+                silent = true;
+            } else if (arg.toLowerCase().startsWith("server:")) {
+                targetServer = arg.substring(7);
+                if (targetServer.isEmpty()) targetServer = null;
+            } else {
+                filteredArgs.add(arg);
+            }
         }
-        String[] cleanArgs = java.util.Arrays.copyOf(cleaned, cleanedIdx);
+
+        if (filteredArgs.size() < 2) {
+            MessageUtil.send(sender, "usage_" + commandName);
+            return true;
+        }
 
         if (targetServer != null) {
             boolean canUseServer = sender.hasPermission("dbans.server.bypass") ||
@@ -72,18 +78,14 @@ public abstract class BasePunishCommand implements CommandExecutor {
             }
         }
 
-        if (cleanArgs.length < 2) {
-            MessageUtil.send(sender, "usage_" + commandName);
-            return true;
-        }
-
-        String targetName = cleanArgs[0];
+        String targetName = filteredArgs.get(0);
         String reason;
         Long duration = null;
 
-        // Обработка пресетов
-        if (cleanArgs[cleanArgs.length - 1].startsWith("+")) {
-            String presetName = cleanArgs[cleanArgs.length - 1].substring(1);
+        // Обработка пресета
+        String lastArg = filteredArgs.get(filteredArgs.size() - 1);
+        if (lastArg.startsWith("+")) {
+            String presetName = lastArg.substring(1);
             PresetManager.PunishmentPreset preset = plugin.getPresetManager().getPreset(presetName);
             if (preset == null) {
                 MessageUtil.send(sender, "preset_not_found", "name", presetName);
@@ -97,7 +99,6 @@ public abstract class BasePunishCommand implements CommandExecutor {
                 MessageUtil.send(sender, "no_preset_permission", "preset", presetName);
                 return true;
             }
-            // Проверка соответствия перманентности
             if (isPermanent() && !preset.isPermanent()) {
                 MessageUtil.send(sender, "preset_has_duration", "preset", presetName, "command", commandName);
                 return true;
@@ -116,73 +117,102 @@ public abstract class BasePunishCommand implements CommandExecutor {
                 }
             }
         } else {
-            // Обычный ввод: имя, [длительность], причина
-            duration = parseDuration(cleanArgs, 1);
-            int reasonStart = (duration != null) ? 2 : 1;
-            if (reasonStart >= cleanArgs.length) {
-                MessageUtil.send(sender, "usage_" + commandName);
-                return true;
+            // Обычный ввод
+            if (filteredArgs.size() > 1 && TimeUtil.isTimeFormat(filteredArgs.get(1))) {
+                try {
+                    duration = TimeUtil.parseDuration(filteredArgs.get(1));
+                } catch (IllegalArgumentException e) {
+                    MessageUtil.send(sender, "invalid_time");
+                    return true;
+                }
+                if (filteredArgs.size() < 3) {
+                    MessageUtil.send(sender, "usage_" + commandName);
+                    return true;
+                }
+                reason = String.join(" ", filteredArgs.subList(2, filteredArgs.size()));
+            } else {
+                reason = String.join(" ", filteredArgs.subList(1, filteredArgs.size()));
+                duration = null;
             }
-            reason = String.join(" ", java.util.Arrays.copyOfRange(cleanArgs, reasonStart, cleanArgs.length));
         }
 
-        // ===== КОРРЕКЦИЯ ДЛИТЕЛЬНОСТИ В ЗАВИСИМОСТИ ОТ ТИПА КОМАНДЫ =====
         if (isPermanent()) {
-            // Для перманентных команд длительность всегда null
             duration = null;
         } else {
-            // Для временных команд длительность обязательна
             if (duration == null) {
                 MessageUtil.send(sender, "usage_" + commandName);
                 return true;
             }
-            // Дополнительно можно проверить, что длительность положительная
             if (duration <= 0) {
                 MessageUtil.send(sender, "invalid_time");
                 return true;
             }
         }
-        // ============================================================
 
+        // Проверка на самого себя
         if (plugin.getSelfPunishChecker().isSelfPunish(sender, targetName)) return true;
 
-        OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
+        OfflinePlayer target = plugin.getPlayerCache().getOfflinePlayer(targetName);
         if (!target.hasPlayedBefore() && !target.isOnline()) {
             MessageUtil.send(sender, "player_not_found", "target", targetName);
             return true;
         }
 
-        if (!plugin.getLimitsManager().canPunish(sender, target)) return true;
+        // Используем новый API для проверок иммунитета и прав
+        UUID targetUuid = target.getUniqueId();
+        PunishmentType apiType = getType(); // новый enum
 
-        Player targetOnline = target.getPlayer();
-        if (targetOnline != null) {
-            if (plugin.getLimitsManager().isImmune(targetOnline, commandName)) {
-                MessageUtil.send(sender, "target_immune_permission", "target", target.getName());
-                return true;
-            }
-        } else {
-            if (plugin.getLimitsManager().isImmune(target, commandName)) {
-                MessageUtil.send(sender, "target_immune_permission", "target", target.getName());
-                return true;
+        // Проверка иммунитета через PermissionService
+        CompletableFuture<Boolean> immuneFuture = plugin.getApi().permissions().hasImmunity(targetUuid, apiType);
+        if (immuneFuture.join()) {
+            MessageUtil.send(sender, "target_immune_permission", "target", target.getName());
+            return true;
+        }
+
+        // Проверка приоритета
+        CompletableFuture<Boolean> canPunishFuture = plugin.getApi().permissions().canPunish(
+                sender instanceof Player ? ((Player) sender).getUniqueId() : CONSOLE_UUID,
+                targetUuid
+        );
+        if (!canPunishFuture.join()) {
+            MessageUtil.send(sender, "cannot_punish_higher_priority", "target", target.getName());
+            return true;
+        }
+
+        // Проверка активного наказания (кроме KICK)
+        if (apiType != PunishmentType.KICK) {
+            CompletableFuture<Boolean> hasActiveFuture = plugin.getApi().punishments().hasActive(targetUuid, apiType);
+            if (hasActiveFuture.join()) {
+                String alreadyKey = switch (apiType) {
+                    case BAN -> "ban_already";
+                    case MUTE -> "mute_already";
+                    case JAIL -> "already_jailed";
+                    case WARNING -> "already_warned";
+                    default -> null;
+                };
+                if (alreadyKey != null) {
+                    MessageUtil.send(sender, alreadyKey, "target", target.getName());
+                    return true;
+                }
             }
         }
 
-        if (getType() != PunishmentType.KICK && hasActivePunishment(target, plugin.getMode())) {
-            String alreadyKey = (getType() == PunishmentType.BAN) ? "ban_already" :
-                    (getType() == PunishmentType.MUTE) ? "mute_already" :
-                            (getType() == PunishmentType.JAIL) ? "already_jailed" :
-                                    (getType() == PunishmentType.WARNING) ? "already_warned" : null;
-            if (alreadyKey != null) {
-                MessageUtil.send(sender, alreadyKey, "target", target.getName());
-                return true;
-            }
-        }
-
+        // Кулдаун
         if (sender instanceof Player) {
             Player issuer = (Player) sender;
             if (plugin.getLimitsManager().isOnCooldown(issuer, commandName)) {
                 int remaining = plugin.getLimitsManager().getRemainingCooldown(issuer, commandName);
                 MessageUtil.send(sender, "command_on_cooldown", "command", commandName, "time", String.valueOf(remaining));
+                return true;
+            }
+        }
+
+        // Проверка лимитов длительности (для временных)
+        if (!isPermanent() && sender instanceof Player) {
+            long maxDuration = plugin.getLimitsManager().getMaxDuration((Player) sender, commandName);
+            if (maxDuration > 0 && duration > maxDuration) {
+                String group = plugin.getLuckPermsHook().getPrimaryGroup((Player) sender);
+                MessageUtil.send(sender, "limit_exceed", "max", TimeUtil.formatDuration(maxDuration), "group", group);
                 return true;
             }
         }
@@ -198,6 +228,7 @@ public abstract class BasePunishCommand implements CommandExecutor {
             plugin.getLimitsManager().setCooldown((Player) sender, commandName);
         }
 
+        // Проверка silent
         boolean canSilent = true;
         if (sender instanceof Player) {
             canSilent = plugin.getLimitsManager().canUseSilent((Player) sender, commandName);
@@ -207,9 +238,8 @@ public abstract class BasePunishCommand implements CommandExecutor {
             silent = false;
         }
 
-        // Выполнение наказания (duration уже скорректирован)
+        // Выполняем наказание через новый API
         executePunishment(sender, target, reason, finalServer, silent, duration);
-
         return true;
     }
 }

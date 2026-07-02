@@ -1,5 +1,6 @@
 package me.demro.dbans.util;
 
+import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -15,6 +16,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Slf4j
 public class MessageUtil {
     private static DBans plugin;
     private static YamlConfiguration messagesConfig;
@@ -61,7 +63,7 @@ public class MessageUtil {
             cache.put(key, fallback);
             return fallback;
         }
-        plugin.getLogger().warning("Missing message key: " + key);
+        log.warn("Missing message key: {}", key);
         return null;
     }
 
@@ -133,18 +135,10 @@ public class MessageUtil {
         sender.sendMessage(deserialize(raw, placeholders));
     }
 
-    /**
-     * Отправляет broadcast-сообщение игрокам с указанным разрешением.
-     * Также игроки с разрешением dbans.notify.* видят все сообщения.
-     *
-     * @param permission разрешение для просмотра (если null, отправляется всем)
-     * @param key        ключ сообщения из messages.yml
-     * @param placeholders плейсхолдеры для замены
-     */
     public static void broadcast(String permission, String key, Object... placeholders) {
         String raw = getRawMessage(key);
         if (raw == null) {
-            plugin.getLogger().warning("Missing message key for broadcast: " + key);
+            log.warn("Missing message key for broadcast: {}", key);
             return;
         }
         Component component = deserialize(raw, placeholders);

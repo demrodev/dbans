@@ -1,5 +1,6 @@
 package me.demro.dbans.util;
 
+import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import me.demro.dbans.model.Punishment;
 import me.demro.dbans.model.PunishmentType;
@@ -12,6 +13,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 public class WarnManager {
     private final DBans plugin;
     private final ConcurrentHashMap<UUID, Integer> warnCountCache = new ConcurrentHashMap<>();
@@ -68,8 +70,18 @@ public class WarnManager {
 
         switch (punishmentType.toLowerCase()) {
             case "ban":
-                punishment = new Punishment(target.getUniqueId(), target.getName(), issuerUuid, issuerName,
-                        PunishmentType.BAN, reason, startTime, null, serverName);
+                punishment = Punishment.builder()
+                        .playerUuid(target.getUniqueId())
+                        .playerName(target.getName())
+                        .issuerUuid(issuerUuid)
+                        .issuerName(issuerName)
+                        .type(PunishmentType.BAN)
+                        .reason(reason)
+                        .startTime(startTime)
+                        .endTime(null)
+                        .active(true)
+                        .serverName(serverName)
+                        .build();
                 plugin.getDatabase().savePunishment(punishment);
                 if (target.isOnline()) {
                     String kickMsg = MessageUtil.getRawMessage("ban_player");
@@ -81,8 +93,18 @@ public class WarnManager {
                         "sender", issuerName, "target", target.getName(), "reason", reason, "server", serverName);
                 break;
             case "tempban":
-                punishment = new Punishment(target.getUniqueId(), target.getName(), issuerUuid, issuerName,
-                        PunishmentType.BAN, reason, startTime, endTime, serverName);
+                punishment = Punishment.builder()
+                        .playerUuid(target.getUniqueId())
+                        .playerName(target.getName())
+                        .issuerUuid(issuerUuid)
+                        .issuerName(issuerName)
+                        .type(PunishmentType.BAN)
+                        .reason(reason)
+                        .startTime(startTime)
+                        .endTime(endTime)
+                        .active(true)
+                        .serverName(serverName)
+                        .build();
                 plugin.getDatabase().savePunishment(punishment);
                 if (target.isOnline()) {
                     String kickMsg = MessageUtil.getRawMessage("tempban_player");
@@ -96,8 +118,18 @@ public class WarnManager {
                         "duration", TimeUtil.formatDuration(duration), "server", serverName);
                 break;
             case "mute":
-                punishment = new Punishment(target.getUniqueId(), target.getName(), issuerUuid, issuerName,
-                        PunishmentType.MUTE, reason, startTime, null, serverName);
+                punishment = Punishment.builder()
+                        .playerUuid(target.getUniqueId())
+                        .playerName(target.getName())
+                        .issuerUuid(issuerUuid)
+                        .issuerName(issuerName)
+                        .type(PunishmentType.MUTE)
+                        .reason(reason)
+                        .startTime(startTime)
+                        .endTime(null)
+                        .active(true)
+                        .serverName(serverName)
+                        .build();
                 plugin.getDatabase().savePunishment(punishment);
                 if (target.isOnline()) {
                     MessageUtil.send(target, "mute_player", "sender", issuerName, "reason", reason, "server", serverName);
@@ -106,8 +138,18 @@ public class WarnManager {
                         "sender", issuerName, "target", target.getName(), "reason", reason, "server", serverName);
                 break;
             case "tempmute":
-                punishment = new Punishment(target.getUniqueId(), target.getName(), issuerUuid, issuerName,
-                        PunishmentType.MUTE, reason, startTime, endTime, serverName);
+                punishment = Punishment.builder()
+                        .playerUuid(target.getUniqueId())
+                        .playerName(target.getName())
+                        .issuerUuid(issuerUuid)
+                        .issuerName(issuerName)
+                        .type(PunishmentType.MUTE)
+                        .reason(reason)
+                        .startTime(startTime)
+                        .endTime(endTime)
+                        .active(true)
+                        .serverName(serverName)
+                        .build();
                 plugin.getDatabase().savePunishment(punishment);
                 plugin.scheduleMuteExpiry(punishment);
                 if (target.isOnline()) {
@@ -120,8 +162,18 @@ public class WarnManager {
                         "duration", TimeUtil.formatDuration(duration), "server", serverName);
                 break;
             case "kick":
-                punishment = new Punishment(target.getUniqueId(), target.getName(), issuerUuid, issuerName,
-                        PunishmentType.KICK, reason, startTime, null, serverName);
+                punishment = Punishment.builder()
+                        .playerUuid(target.getUniqueId())
+                        .playerName(target.getName())
+                        .issuerUuid(issuerUuid)
+                        .issuerName(issuerName)
+                        .type(PunishmentType.KICK)
+                        .reason(reason)
+                        .startTime(startTime)
+                        .endTime(null)
+                        .active(true)
+                        .serverName(serverName)
+                        .build();
                 plugin.getDatabase().savePunishment(punishment);
                 if (target.isOnline()) {
                     String kickMsg = MessageUtil.getRawMessage("kick_player");

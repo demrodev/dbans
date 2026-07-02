@@ -1,16 +1,22 @@
 package me.demro.dbans.command;
 
+import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import me.demro.dbans.util.MessageUtil;
 import me.demro.dbans.util.PresetManager.PunishmentPreset;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+
 import java.util.Collection;
 
+@Slf4j
 public class PresetListCommand implements CommandExecutor {
     private final DBans plugin;
-    public PresetListCommand(DBans plugin) { this.plugin = plugin; }
+
+    public PresetListCommand(DBans plugin) {
+        this.plugin = plugin;
+    }
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {

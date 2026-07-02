@@ -1,15 +1,19 @@
 package me.demro.dbans.command;
 
-import me.demro.dbans.model.Punishment;
-import me.demro.dbans.model.PunishmentType;
+import lombok.extern.slf4j.Slf4j;
+import me.demro.dbans.DBans;
+import me.demro.dlibs.dbans.api.exception.PlayerNotFoundException;
+import me.demro.dlibs.dbans.api.player.PlayerIdentity;
+import me.demro.dlibs.dbans.api.punishment.*;
 import me.demro.dbans.util.MessageUtil;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+@Slf4j
 public class KickCommand extends BasePunishCommand {
 
-    public KickCommand(me.demro.dbans.DBans plugin) {
+    public KickCommand(DBans plugin) {
         super(plugin);
     }
 
@@ -29,34 +33,35 @@ public class KickCommand extends BasePunishCommand {
     }
 
     @Override
-    protected boolean hasActivePunishment(OfflinePlayer target, String mode) {
-        return false;
-    }
-
-    @Override
     protected void executePunishment(CommandSender sender, OfflinePlayer target, String reason, String finalServer, boolean silent, Long duration) {
-        Punishment kick = new Punishment(target.getUniqueId(), target.getName(),
-                sender instanceof Player ? ((Player) sender).getUniqueId() : CONSOLE_UUID,
-                sender.getName(), PunishmentType.KICK, reason, System.currentTimeMillis(), null, finalServer);
-        plugin.getDatabase().savePunishment(kick);
-        // ======== ВСТАВКА ========
-        if (plugin.getProxySyncManager() != null) {
-            plugin.getProxySyncManager().sendPunishmentCreate(kick);
-            plugin.getLogger().info("📤 [Sync] Sent punishment_create for " + kick.getId());
-        }
-        // ==========================
+        PunishmentCreateRequest request = PunishmentCreateRequest.builder()
+                .target(PlayerIdentity.of(target.getUniqueId(), target.getName()))
+                .type(PunishmentType.KICK)
+                .reason(PunishmentReason.of(reason))
+                .duration(PunishmentDuration.instant())
+                .issuer(sender instanceof Player
+                        ? PunishmentIssuer.player(((Player) sender).getUniqueId(), sender.getName())
+                        : PunishmentIssuer.console())
+                .serverName(finalServer)
+                .options(PunishmentOptions.builder()
+                        .silent(silent)
+                        .broadcast(!silent)
+                        .notifyTarget(true)
+                        .build())
+                .build();
 
-        Player online = target.getPlayer();
-        if (online != null && finalServer.equals(plugin.getServerName())) {
-            String kickMsg = MessageUtil.getRawMessage("kick_player");
-            if (kickMsg == null) kickMsg = "&c✖ Вас кикнули.\nПричина: %reason%\nАдминистратор: %sender%";
-            kickMsg = kickMsg.replace("%reason%", reason).replace("%sender%", sender.getName());
-            online.kick(MessageUtil.deserializeForKick(kickMsg));
-        }
-
-        String permission = silent ? null : "dbans.notify.kick";
-        MessageUtil.broadcast(permission, "kick_broadcast",
-                "sender", sender.getName(), "target", target.getName(),
-                "reason", reason, "server", finalServer, "id", kick.getId());
+        plugin.getApi().punishments().create(request)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        if (ex instanceof PlayerNotFoundException) {
+                            MessageUtil.send(sender, "player_not_found", "target", target.getName());
+                        } else {
+                            MessageUtil.send(sender, "error_creating_punishment", "error", ex.getMessage());
+                            log.error("Error kicking player", ex);
+                        }
+                    } else {
+                        log.info("Player {} kicked by {}", target.getName(), sender.getName());
+                    }
+                });
     }
 }

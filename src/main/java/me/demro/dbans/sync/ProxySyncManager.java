@@ -1,6 +1,7 @@
 package me.demro.dbans.sync;
 
 import com.google.gson.Gson;
+import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import me.demro.dbans.model.JailPunishment;
 import me.demro.dbans.model.Punishment;
@@ -17,6 +18,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 public class ProxySyncManager implements PluginMessageListener {
     private final DBans plugin;
     private final Gson gson = new Gson();
@@ -35,28 +37,25 @@ public class ProxySyncManager implements PluginMessageListener {
 
     private void sendMessage(SyncMessage msg) {
         if (!isSyncEnabled()) {
-            plugin.getLogger().info("⏭️ Sync disabled, not sending " + msg.getType());
+            log.info("⏭️ Sync disabled, not sending {}", msg.getType());
             return;
         }
         String json = gson.toJson(msg);
         byte[] data = json.getBytes(StandardCharsets.UTF_8);
-        plugin.getLogger().info("📤 [Sync] Sending " + msg.getType() + " | ID: " + msg.getData().get("id") + " | JSON: " + json);
+        log.info("📤 [Sync] Sending {} | ID: {} | JSON: {}", msg.getType(), msg.getData().get("id"), json);
         Bukkit.getServer().sendPluginMessage(plugin, Constants.CHANNEL_NAME, data);
     }
 
-    // Отправка создания наказания (Punishment)
     public void sendPunishmentCreate(Punishment punishment) {
         Map<String, Object> data = punishmentToMap(punishment);
         sendMessage(new SyncMessage("punishment_create", data));
     }
 
-    // Отправка отмены наказания (Punishment)
     public void sendPunishmentRevoke(Punishment punishment) {
         Map<String, Object> data = punishmentToMap(punishment);
         sendMessage(new SyncMessage("punishment_revoke", data));
     }
 
-    // Отправка изменения (причина или длительность)
     public void sendPunishmentModify(Punishment punishment, String oldReason, Long oldEnd) {
         Map<String, Object> data = punishmentToMap(punishment);
         if (oldReason != null) data.put("oldReason", oldReason);
@@ -64,13 +63,11 @@ public class ProxySyncManager implements PluginMessageListener {
         sendMessage(new SyncMessage("punishment_modify", data));
     }
 
-    // Отправка истечения наказания
     public void sendPunishmentExpire(Punishment punishment) {
         Map<String, Object> data = punishmentToMap(punishment);
         sendMessage(new SyncMessage("punishment_expire", data));
     }
 
-    // Удобные методы для Jail и Warning (преобразуют в Punishment)
     public void sendPunishmentCreate(JailPunishment jail) {
         sendPunishmentCreate(jailToPunishment(jail));
     }
@@ -92,19 +89,18 @@ public class ProxySyncManager implements PluginMessageListener {
     @Override
     public void onPluginMessageReceived(String channel, Player player, byte[] message) {
         if (!channel.equals(Constants.CHANNEL_NAME)) return;
-        if (processingIncoming) return; // защита от рекурсии
+        if (processingIncoming) return;
 
         try {
             String json = new String(message, StandardCharsets.UTF_8);
             SyncMessage msg = gson.fromJson(json, SyncMessage.class);
-            plugin.getLogger().info("📥 [Sync] Received " + msg.getType() + " | ID: " + msg.getData().get("id"));
+            log.info("📥 [Sync] Received {} | ID: {}", msg.getType(), msg.getData().get("id"));
 
             processingIncoming = true;
             handleIncomingMessage(msg);
             processingIncoming = false;
         } catch (Exception e) {
-            plugin.getLogger().warning("❌ [Sync] Failed to process incoming message: " + e.getMessage());
-            e.printStackTrace();
+            log.warn("❌ [Sync] Failed to process incoming message: {}", e.getMessage(), e);
         }
     }
 
@@ -127,24 +123,23 @@ public class ProxySyncManager implements PluginMessageListener {
         String pardonedBy = (String) data.get("pardonedBy");
         Long pardonedAt = data.get("pardonedAt") != null ? ((Number) data.get("pardonedAt")).longValue() : null;
 
-        // Создаём универсальный Punishment
-        Punishment punishment = new Punishment();
-        punishment.setId(id);
-        punishment.setPlayerUuid(playerUuid);
-        punishment.setPlayerName(playerName);
-        punishment.setIssuerUuid(issuerUuid);
-        punishment.setIssuerName(issuerName);
-        punishment.setType(pType);
-        punishment.setReason(reason);
-        punishment.setStartTime(startTime);
-        punishment.setEndTime(endTime);
-        punishment.setActive(active);
-        punishment.setServerName(serverName);
-        punishment.setPardonReason(pardonReason);
-        punishment.setPardonedBy(pardonedBy);
-        punishment.setPardonedAt(pardonedAt);
+        Punishment punishment = Punishment.builder()
+                .id(id)
+                .playerUuid(playerUuid)
+                .playerName(playerName)
+                .issuerUuid(issuerUuid)
+                .issuerName(issuerName)
+                .type(pType)
+                .reason(reason)
+                .startTime(startTime)
+                .endTime(endTime)
+                .active(active)
+                .serverName(serverName)
+                .pardonReason(pardonReason)
+                .pardonedBy(pardonedBy)
+                .pardonedAt(pardonedAt)
+                .build();
 
-        // В зависимости от типа обрабатываем в соответствующей таблице
         if (pType == PunishmentType.WARNING) {
             handleWarning(type, punishment);
         } else if (pType == PunishmentType.JAIL) {
@@ -154,17 +149,15 @@ public class ProxySyncManager implements PluginMessageListener {
         }
     }
 
-    // ===== Обработка обычных наказаний (BAN, MUTE, KICK, IPBAN) =====
+    // ===== Обработка обычных наказаний =====
 
     private void handleDefault(String type, Punishment punishment) {
-        // Проверяем, нужно ли применять на этом сервере (для sync_static)
         if (!shouldApplyLocally(punishment)) {
-            plugin.getLogger().info("⏭️ [Sync] Skipping apply for server " + plugin.getServerName());
+            log.info("⏭️ [Sync] Skipping apply for server {}", plugin.getServerName());
             return;
         }
 
         if ("punishment_create".equals(type) || "punishment_modify".equals(type) || "punishment_expire".equals(type)) {
-            // Сохраняем/обновляем в БД
             if ("punishment_create".equals(type)) {
                 Punishment existing = plugin.getDatabase().getPunishmentById(punishment.getId());
                 if (existing == null) {
@@ -195,7 +188,6 @@ public class ProxySyncManager implements PluginMessageListener {
             }
         }
 
-        // Применяем эффекты к онлайн-игроку (если активно)
         if (punishment.isActive() && !punishment.isExpired()) {
             applyLocalEffects(punishment);
         } else {
@@ -207,23 +199,24 @@ public class ProxySyncManager implements PluginMessageListener {
 
     private void handleWarning(String type, Punishment punishment) {
         if (!shouldApplyLocally(punishment)) {
-            plugin.getLogger().info("⏭️ [Sync] Skipping warning apply for server " + plugin.getServerName());
+            log.info("⏭️ [Sync] Skipping warning apply for server {}", plugin.getServerName());
             return;
         }
 
-        Warning warning = new Warning();
-        warning.setId(punishment.getId());
-        warning.setPlayerUuid(punishment.getPlayerUuid());
-        warning.setPlayerName(punishment.getPlayerName());
-        warning.setIssuerUuid(punishment.getIssuerUuid());
-        warning.setIssuerName(punishment.getIssuerName());
-        warning.setReason(punishment.getReason());
-        warning.setStartTime(punishment.getStartTime());
-        warning.setEndTime(punishment.getEndTime());
-        warning.setActive(punishment.isActive());
-        warning.setServerName(punishment.getServerName());
-        warning.setPardonedBy(punishment.getPardonedBy());
-        warning.setPardonedAt(punishment.getPardonedAt());
+        Warning warning = Warning.builder()
+                .id(punishment.getId())
+                .playerUuid(punishment.getPlayerUuid())
+                .playerName(punishment.getPlayerName())
+                .issuerUuid(punishment.getIssuerUuid())
+                .issuerName(punishment.getIssuerName())
+                .reason(punishment.getReason())
+                .startTime(punishment.getStartTime())
+                .endTime(punishment.getEndTime())
+                .active(punishment.isActive())
+                .serverName(punishment.getServerName())
+                .pardonedBy(punishment.getPardonedBy())
+                .pardonedAt(punishment.getPardonedAt())
+                .build();
 
         if ("punishment_create".equals(type)) {
             Warning existing = plugin.getDatabase().getWarningById(warning.getId());
@@ -239,7 +232,6 @@ public class ProxySyncManager implements PluginMessageListener {
             plugin.getDatabase().updateWarning(warning);
         }
 
-        // Эффекты для игрока
         Player player = Bukkit.getPlayer(warning.getPlayerUuid());
         if (player != null && player.isOnline()) {
             if (warning.isActive() && !warning.isExpired()) {
@@ -252,7 +244,6 @@ public class ProxySyncManager implements PluginMessageListener {
                         "id", warning.getId());
                 plugin.getWarnManager().checkAndApplyThresholds(player);
             } else {
-                // Если отменено – можно уведомить
                 MessageUtil.send(player, "unwarn_notify", "issuer", warning.getPardonedBy(), "id", warning.getId());
             }
         }
@@ -262,23 +253,24 @@ public class ProxySyncManager implements PluginMessageListener {
 
     private void handleJail(String type, Punishment punishment) {
         if (!shouldApplyLocally(punishment)) {
-            plugin.getLogger().info("⏭️ [Sync] Skipping jail apply for server " + plugin.getServerName());
+            log.info("⏭️ [Sync] Skipping jail apply for server {}", plugin.getServerName());
             return;
         }
 
-        JailPunishment jail = new JailPunishment();
-        jail.setId(punishment.getId());
-        jail.setPlayerUuid(punishment.getPlayerUuid());
-        jail.setPlayerName(punishment.getPlayerName());
-        jail.setIssuerUuid(punishment.getIssuerUuid());
-        jail.setIssuerName(punishment.getIssuerName());
-        jail.setReason(punishment.getReason());
-        jail.setStartTime(punishment.getStartTime());
-        jail.setEndTime(punishment.getEndTime());
-        jail.setActive(punishment.isActive());
-        jail.setServerName(punishment.getServerName());
-        jail.setPardonedBy(punishment.getPardonedBy());
-        jail.setPardonedAt(punishment.getPardonedAt());
+        JailPunishment jail = JailPunishment.builder()
+                .id(punishment.getId())
+                .playerUuid(punishment.getPlayerUuid())
+                .playerName(punishment.getPlayerName())
+                .issuerUuid(punishment.getIssuerUuid())
+                .issuerName(punishment.getIssuerName())
+                .reason(punishment.getReason())
+                .startTime(punishment.getStartTime())
+                .endTime(punishment.getEndTime())
+                .active(punishment.isActive())
+                .serverName(punishment.getServerName())
+                .pardonedBy(punishment.getPardonedBy())
+                .pardonedAt(punishment.getPardonedAt())
+                .build();
 
         if ("punishment_create".equals(type)) {
             plugin.getDatabase().saveJail(jail);
@@ -292,24 +284,18 @@ public class ProxySyncManager implements PluginMessageListener {
         Player player = Bukkit.getPlayer(jail.getPlayerUuid());
         if (player != null && player.isOnline()) {
             if (jail.isActive() && !jail.isExpired()) {
-                // Если игрок не в jail мире, телепортируем в спавн jail мира (или используем сохранённую локацию, если есть)
-                // В сообщении координаты не передаются, поэтому используем дефолт
                 if (!player.getWorld().getName().equals("jail")) {
-                    // Получаем jailLocation из БД (может быть null)
                     JailPunishment current = plugin.getDatabase().getActiveJail(jail.getPlayerUuid());
                     if (current != null && current.getJailLocation() != null) {
                         player.teleport(current.getJailLocation());
                     } else {
-                        // Или спавн мира jail
                         org.bukkit.World w = Bukkit.getWorld("jail");
                         if (w != null) player.teleport(w.getSpawnLocation());
                     }
-                    // Применяем эффекты (невидимость и т.п.)
-                    plugin.getJailManager().handlePlayerJoin(player); // это применит эффекты
+                    plugin.getJailManager().handlePlayerJoin(player);
                 }
                 MessageUtil.send(player, "jail_sync_notify", "reason", jail.getReason(), "sender", jail.getIssuerName());
             } else {
-                // Освобождение
                 if (player.getWorld().getName().equals("jail")) {
                     JailPunishment current = plugin.getDatabase().getActiveJail(jail.getPlayerUuid());
                     if (current != null && current.getId().equals(jail.getId())) {
@@ -333,7 +319,21 @@ public class ProxySyncManager implements PluginMessageListener {
         return true;
     }
 
-    // Применение локальных эффектов (без широковещания)
+    // ===== Уведомления с fallback в БД =====
+
+    private void notifyOrStore(UUID playerUuid, String messageKey, Map<String, String> placeholders) {
+        Player player = Bukkit.getPlayer(playerUuid);
+        if (player != null && player.isOnline()) {
+            MessageUtil.send(player, messageKey, placeholders);
+            log.info("📨 [Sync] Sent notification to {} (online)", player.getName());
+        } else {
+            plugin.addNotification(playerUuid, messageKey, placeholders);
+            log.info("💾 [Sync] Stored notification for {} (offline)", playerUuid);
+        }
+    }
+
+    // ===== Применение локальных эффектов =====
+
     private void applyLocalEffects(Punishment punishment) {
         Player player = Bukkit.getPlayer(punishment.getPlayerUuid());
         if (player == null || !player.isOnline()) return;
@@ -386,8 +386,6 @@ public class ProxySyncManager implements PluginMessageListener {
                 }
                 break;
             case IPBAN:
-                // IP-бан не требует немедленного действия на других серверах, кроме кика при входе
-                // Можно кикнуть, если IP совпадает
                 String ip = player.getAddress().getAddress().getHostAddress();
                 if (plugin.getDatabase().isIpBanned(ip)) {
                     String kickMsg = MessageUtil.getRawMessage("banip_player");
@@ -403,27 +401,24 @@ public class ProxySyncManager implements PluginMessageListener {
     }
 
     private void removeLocalEffects(Punishment punishment) {
-        // Только для мута и jail есть обратные эффекты
         Player player = Bukkit.getPlayer(punishment.getPlayerUuid());
         if (player == null || !player.isOnline()) return;
 
         switch (punishment.getType()) {
             case MUTE:
                 plugin.cancelMuteExpiry(punishment.getId());
-                // Если это отмена, можно уведомить
                 if ("punishment_revoke".equals(punishment.getType().name())) {
                     MessageUtil.send(player, "unmute_notify", "sender", punishment.getPardonedBy());
                 }
                 break;
             case JAIL:
-                // Освобождение обрабатывается в handleJail
                 break;
             default:
                 break;
         }
     }
 
-    // ===== Преобразования объектов в Map и обратно =====
+    // ===== Преобразования =====
 
     private Map<String, Object> punishmentToMap(Punishment p) {
         Map<String, Object> map = new HashMap<>();
@@ -445,38 +440,38 @@ public class ProxySyncManager implements PluginMessageListener {
     }
 
     private Punishment jailToPunishment(JailPunishment jail) {
-        Punishment p = new Punishment();
-        p.setId(jail.getId());
-        p.setPlayerUuid(jail.getPlayerUuid());
-        p.setPlayerName(jail.getPlayerName());
-        p.setIssuerUuid(jail.getIssuerUuid());
-        p.setIssuerName(jail.getIssuerName());
-        p.setType(PunishmentType.JAIL);
-        p.setReason(jail.getReason());
-        p.setStartTime(jail.getStartTime());
-        p.setEndTime(jail.getEndTime());
-        p.setActive(jail.isActive());
-        p.setServerName(jail.getServerName());
-        p.setPardonedBy(jail.getPardonedBy());
-        p.setPardonedAt(jail.getPardonedAt());
-        return p;
+        return Punishment.builder()
+                .id(jail.getId())
+                .playerUuid(jail.getPlayerUuid())
+                .playerName(jail.getPlayerName())
+                .issuerUuid(jail.getIssuerUuid())
+                .issuerName(jail.getIssuerName())
+                .type(PunishmentType.JAIL)
+                .reason(jail.getReason())
+                .startTime(jail.getStartTime())
+                .endTime(jail.getEndTime())
+                .active(jail.isActive())
+                .serverName(jail.getServerName())
+                .pardonedBy(jail.getPardonedBy())
+                .pardonedAt(jail.getPardonedAt())
+                .build();
     }
 
     private Punishment warningToPunishment(Warning warning) {
-        Punishment p = new Punishment();
-        p.setId(warning.getId());
-        p.setPlayerUuid(warning.getPlayerUuid());
-        p.setPlayerName(warning.getPlayerName());
-        p.setIssuerUuid(warning.getIssuerUuid());
-        p.setIssuerName(warning.getIssuerName());
-        p.setType(PunishmentType.WARNING);
-        p.setReason(warning.getReason());
-        p.setStartTime(warning.getStartTime());
-        p.setEndTime(warning.getEndTime());
-        p.setActive(warning.isActive());
-        p.setServerName(warning.getServerName());
-        p.setPardonedBy(warning.getPardonedBy());
-        p.setPardonedAt(warning.getPardonedAt());
-        return p;
+        return Punishment.builder()
+                .id(warning.getId())
+                .playerUuid(warning.getPlayerUuid())
+                .playerName(warning.getPlayerName())
+                .issuerUuid(warning.getIssuerUuid())
+                .issuerName(warning.getIssuerName())
+                .type(PunishmentType.WARNING)
+                .reason(warning.getReason())
+                .startTime(warning.getStartTime())
+                .endTime(warning.getEndTime())
+                .active(warning.isActive())
+                .serverName(warning.getServerName())
+                .pardonedBy(warning.getPardonedBy())
+                .pardonedAt(warning.getPardonedAt())
+                .build();
     }
 }

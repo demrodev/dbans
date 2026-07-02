@@ -1,11 +1,13 @@
 package me.demro.dbans.placeholder;
 
+import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+@Slf4j
 public class DBansExpansion extends PlaceholderExpansion {
     private final DBans plugin;
 
@@ -95,13 +97,13 @@ public class DBansExpansion extends PlaceholderExpansion {
         // %dbans_gives_<type>_player% – наказания определённого типа, выданные текущим игроком
         if (identifier.startsWith("gives_") && identifier.endsWith("_player")) {
             if (player == null) return null;
-            String type = identifier.substring(6, identifier.length() - 7).toUpperCase(); // "gives_" + "BAN" + "_player"
+            String type = identifier.substring(6, identifier.length() - 7).toUpperCase();
             return String.valueOf(plugin.getDatabase().getPunishmentsIssuedByPlayerAndType(player.getName(), type));
         }
 
         // %dbans_gives_<playerName>_<type>% – наказания определённого типа, выданные указанным игроком
         if (identifier.startsWith("gives_")) {
-            String rest = identifier.substring(6); // убираем "gives_"
+            String rest = identifier.substring(6);
             int lastUnderscore = rest.lastIndexOf('_');
             if (lastUnderscore == -1) return null;
             String playerName = rest.substring(0, lastUnderscore);

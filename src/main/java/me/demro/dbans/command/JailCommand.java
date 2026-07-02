@@ -1,16 +1,22 @@
 package me.demro.dbans.command;
 
-import me.demro.dbans.model.PunishmentType;
+import lombok.extern.slf4j.Slf4j;
+import me.demro.dbans.DBans;
+import me.demro.dlibs.dbans.api.exception.PlayerNotFoundException;
+import me.demro.dlibs.dbans.api.player.PlayerIdentity;
+import me.demro.dlibs.dbans.api.punishment.*;
 import me.demro.dbans.util.MessageUtil;
 import me.demro.dbans.util.TimeUtil;
-import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import java.time.Duration;
+
+@Slf4j
 public class JailCommand extends BasePunishCommand {
 
-    public JailCommand(me.demro.dbans.DBans plugin) {
+    public JailCommand(DBans plugin) {
         super(plugin);
     }
 
@@ -41,40 +47,45 @@ public class JailCommand extends BasePunishCommand {
 
     @Override
     protected void executePunishment(CommandSender sender, OfflinePlayer target, String reason, String finalServer, boolean silent, Long duration) {
-        Player online = target.getPlayer();
-        if (online == null || !online.isOnline()) {
+        if (duration == null || duration <= 0) {
+            MessageUtil.send(sender, "invalid_time");
+            return;
+        }
+
+        // Джейл требует, чтобы игрок был онлайн
+        if (!target.isOnline()) {
             MessageUtil.send(sender, "player_not_online", "target", target.getName());
             return;
         }
 
-        if (sender instanceof Player) {
-            Player issuer = (Player) sender;
-            long maxDuration = plugin.getLimitsManager().getMaxDuration(issuer, "jail");
-            if (maxDuration > 0 && duration != null && duration > maxDuration) {
-                String group = plugin.getLuckPermsHook().getPrimaryGroup(issuer);
-                MessageUtil.send(sender, "limit_exceed", "max", TimeUtil.formatDuration(maxDuration), "group", group);
-                return;
-            }
-        }
+        PunishmentCreateRequest request = PunishmentCreateRequest.builder()
+                .target(PlayerIdentity.of(target.getUniqueId(), target.getName()))
+                .type(PunishmentType.JAIL)
+                .reason(PunishmentReason.of(reason))
+                .duration(PunishmentDuration.temporary(Duration.ofMillis(duration)))
+                .issuer(sender instanceof Player
+                        ? PunishmentIssuer.player(((Player) sender).getUniqueId(), sender.getName())
+                        : PunishmentIssuer.console())
+                .serverName(finalServer)
+                .options(PunishmentOptions.builder()
+                        .silent(silent)
+                        .broadcast(!silent)
+                        .notifyTarget(true)
+                        .build())
+                .build();
 
-        Location previousLocation = online.getLocation().clone();
-        String issuerName = sender.getName();
-
-        String jailId = plugin.getJailManager().sendToJail(online, duration, previousLocation, issuerName, reason);
-        if (jailId == null) {
-            MessageUtil.send(sender, "jail_spawn_failed");
-            return;
-        }
-
-        String durationStr = (duration != null && duration > 0) ? TimeUtil.formatDuration(duration) : "навсегда";
-        MessageUtil.send(online, "jail_notify",
-                "sender", issuerName, "reason", reason,
-                "server", finalServer, "duration", durationStr, "id", jailId);
-
-        String permission = silent ? null : "dbans.notify.jail";
-        MessageUtil.broadcast(permission, "jail_broadcast",
-                "sender", issuerName, "target", target.getName(),
-                "reason", reason, "duration", durationStr,
-                "server", finalServer, "id", jailId);
+        plugin.getApi().punishments().create(request)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        if (ex instanceof PlayerNotFoundException) {
+                            MessageUtil.send(sender, "player_not_online", "target", target.getName());
+                        } else {
+                            MessageUtil.send(sender, "error_creating_punishment", "error", ex.getMessage());
+                            log.error("Error jailing player", ex);
+                        }
+                    } else {
+                        log.info("Player {} jailed by {} for {}", target.getName(), sender.getName(), TimeUtil.formatDuration(duration));
+                    }
+                });
     }
 }

@@ -10,31 +10,25 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Управляет кэшами активных наказаний и IP-банов.
- * Использует ConcurrentHashMap с временем жизни записей (TTL).
- */
 public class CacheManager {
     private final DBans plugin;
     private final Map<String, Punishment> activePunishmentCache = new ConcurrentHashMap<>();
+    private final Map<UUID, Punishment> muteCache = new ConcurrentHashMap<>(); // НОВЫЙ КЭШ ДЛЯ МУТА
     private volatile boolean ipBansCacheValid = false;
     private volatile List<String> cachedIpBans = null;
     private long lastIpBansRefresh = 0;
-
     private final long ipBansTtlMillis = TimeUnit.SECONDS.toMillis(60);
-
-    // Убираем final, инициализируем в конструкторе
     private long punishmentTtlMillis;
     private final Map<String, Long> cacheTimestamps = new ConcurrentHashMap<>();
 
     public CacheManager(DBans plugin) {
         this.plugin = plugin;
-        // Инициализация TTL после того, как plugin проинициализирован
         this.punishmentTtlMillis = TimeUnit.SECONDS.toMillis(
                 plugin.getMode().equalsIgnoreCase("sync") ? 60 : 30
         );
     }
 
+    // ===== КЭШ АКТИВНЫХ НАКАЗАНИЙ (существующий) =====
     public Punishment getCachedActivePunishment(UUID uuid, PunishmentType type, String serverName, String mode) {
         String key = buildKey(uuid, type, serverName, mode);
         Punishment cached = activePunishmentCache.get(key);
@@ -53,20 +47,68 @@ public class CacheManager {
         String key = buildKey(uuid, type, serverName, mode);
         activePunishmentCache.put(key, punishment);
         cacheTimestamps.put(key, System.currentTimeMillis());
+        // Если это мут – обновляем кэш мута
+        if (type == PunishmentType.MUTE) {
+            updateMuteCache(uuid, punishment);
+        }
     }
 
     public void invalidateActivePunishment(UUID uuid, PunishmentType type, String serverName, String mode) {
         String key = buildKey(uuid, type, serverName, mode);
         activePunishmentCache.remove(key);
         cacheTimestamps.remove(key);
+        // Если это мут – очищаем кэш мута
+        if (type == PunishmentType.MUTE) {
+            muteCache.remove(uuid);
+        }
     }
 
     public void invalidateAllForPlayer(UUID uuid) {
         activePunishmentCache.keySet().removeIf(key -> key.startsWith(uuid.toString()));
         cacheTimestamps.keySet().removeIf(key -> key.startsWith(uuid.toString()));
+        muteCache.remove(uuid); // Очищаем кэш мута
     }
 
-    // IP-баны
+    // ===== КЭШ МУТА =====
+    public boolean isMuted(UUID playerUuid) {
+        Punishment mute = muteCache.get(playerUuid);
+        if (mute != null && mute.isActive() && !mute.isExpired()) {
+            return true;
+        }
+        if (mute != null) {
+            muteCache.remove(playerUuid);
+        }
+        return false;
+    }
+
+    public Punishment getMute(UUID playerUuid) {
+        Punishment mute = muteCache.get(playerUuid);
+        if (mute != null && mute.isActive() && !mute.isExpired()) {
+            return mute;
+        }
+        if (mute != null) {
+            muteCache.remove(playerUuid);
+        }
+        return null;
+    }
+
+    public void updateMuteCache(UUID playerUuid, Punishment mute) {
+        if (mute != null && mute.isActive() && !mute.isExpired()) {
+            muteCache.put(playerUuid, mute);
+        } else {
+            muteCache.remove(playerUuid);
+        }
+    }
+
+    public void invalidateMuteCache(UUID playerUuid) {
+        muteCache.remove(playerUuid);
+    }
+
+    public void clearMuteCache() {
+        muteCache.clear();
+    }
+
+    // ===== IP-БАНЫ =====
     public boolean isIpBannedCached(String ip) {
         refreshIpBansIfNeeded();
         if (cachedIpBans == null) return false;

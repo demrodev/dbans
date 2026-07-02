@@ -1,59 +1,40 @@
 package me.demro.dbans.util;
 
+import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
-import me.demro.dbans.model.PlayerInfo;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
+import java.util.List;
 
+@Slf4j
 public class AltAccountManager {
     private final DBans plugin;
-    private final Map<String, List<String>> altCache = new ConcurrentHashMap<>();
-    private final Map<String, Long> cacheTime = new ConcurrentHashMap<>();
-    private final long cacheTtl = TimeUnit.MINUTES.toMillis(5); // 5 минут
 
     public AltAccountManager(DBans plugin) {
         this.plugin = plugin;
+        log.debug("AltAccountManager initialized");
     }
 
+    /**
+     * Находит альт-аккаунты для указанного игрока по общему IP.
+     * @param playerName имя игрока
+     * @return список имён альт-аккаунтов (без самого игрока)
+     */
     public List<String> findAltAccounts(String playerName) {
-        String lowerName = playerName.toLowerCase();
-        // Проверка кэша
-        Long time = cacheTime.get(lowerName);
-        if (time != null && System.currentTimeMillis() - time < cacheTtl) {
-            return altCache.getOrDefault(lowerName, Collections.emptyList());
-        }
-
         List<String> alts = new ArrayList<>();
-        PlayerInfo player = plugin.getDatabase().getPlayerByName(playerName);
-        if (player == null) return alts;
-
-        String ip = player.getIp();
-        if (ip == null || ip.isEmpty()) return alts;
-
-        for (PlayerInfo info : plugin.getDatabase().getAllPlayers()) {
-            if (info.getIp().equals(ip) && !info.getName().equalsIgnoreCase(playerName)) {
-                alts.add(info.getName());
+        try {
+            // Получаем IP игрока из таблицы players
+            String ip = plugin.getDatabase().getPlayerIpByName(playerName);
+            if (ip == null) {
+                log.debug("No IP found for player {}", playerName);
+                return alts;
             }
+            // Получаем всех игроков с этим IP, кроме самого playerName
+            alts = plugin.getDatabase().getPlayerNamesByIp(playerName);
+            log.debug("Found {} alt accounts for {}: {}", alts.size(), playerName, alts);
+        } catch (Exception e) {
+            log.error("Failed to find alt accounts for {}: {}", playerName, e.getMessage(), e);
         }
-
-        altCache.put(lowerName, alts);
-        cacheTime.put(lowerName, System.currentTimeMillis());
         return alts;
-    }
-
-    public void invalidateCache(String playerName) {
-        if (playerName != null) {
-            altCache.remove(playerName.toLowerCase());
-            cacheTime.remove(playerName.toLowerCase());
-        } else {
-            altCache.clear();
-            cacheTime.clear();
-        }
-    }
-
-    public void onPlayerLogin(String playerName, String newIp) {
-        invalidateCache(null);
     }
 }

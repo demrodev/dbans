@@ -1,11 +1,9 @@
 package me.demro.dbans.listener;
 
+import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
-import me.demro.dbans.model.JailPunishment;
 import me.demro.dbans.model.PlayerInfo;
 import me.demro.dbans.model.Punishment;
-import me.demro.dbans.model.PunishmentType;
-import me.demro.dbans.model.Warning;
 import me.demro.dbans.util.MessageUtil;
 import me.demro.dbans.util.TimeUtil;
 import org.bukkit.Bukkit;
@@ -18,8 +16,11 @@ import org.bukkit.event.player.PlayerLoginEvent;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
+@Slf4j
 public class LoginListener implements Listener {
+
     private final DBans plugin;
 
     public LoginListener(DBans plugin) {
@@ -32,34 +33,46 @@ public class LoginListener implements Listener {
         String ip = player.getAddress().getAddress().getHostAddress();
         PlayerInfo playerInfo = new PlayerInfo(player.getUniqueId(), player.getName(), ip, System.currentTimeMillis());
 
-        // Асинхронное сохранение игрока
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> plugin.getDatabase().savePlayer(playerInfo));
+        plugin.getPlayerCache().update(player);
 
-        // Уведомление о глобальном муте (с задержкой, чтобы игрок успел залогиниться)
+        // Уведомление о глобальном муте – через новый API
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (player.isOnline()) {
-                Punishment globalMute = getGlobalActiveMute(player.getUniqueId());
-                if (globalMute != null && !globalMute.isExpired()) {
-                    sendMuteNotification(player, globalMute);
-                    plugin.scheduleMuteExpiry(globalMute);
-                    if (plugin.getPunishmentSyncManager() != null) {
-                        plugin.getPunishmentSyncManager().markMuteNotified(player.getUniqueId(), globalMute.getId());
+                UUID uuid = player.getUniqueId();
+                // Проверяем активный мут через API
+                CompletableFuture<Boolean> hasMuteFuture = plugin.getApi().punishments().hasActive(uuid, me.demro.dlibs.dbans.api.punishment.PunishmentType.MUTE);
+                if (hasMuteFuture.join()) {
+                    // Найдём сам мут, чтобы отправить детали
+                    CompletableFuture<List<me.demro.dlibs.dbans.api.punishment.Punishment>> muteListFuture = plugin.getApi().punishments().findActiveByTarget(uuid);
+                    List<me.demro.dlibs.dbans.api.punishment.Punishment> mutes = muteListFuture.join();
+                    if (!mutes.isEmpty()) {
+                        me.demro.dlibs.dbans.api.punishment.Punishment mute = mutes.get(0);
+                        sendMuteNotification(player, mute);
+                        // Планируем истечение, если временный
+                        if (!mute.isPermanent()) {
+                            // Планируем через внутренний менеджер
+                            Punishment internalMute = plugin.getDatabase().getPunishmentById(mute.id().value());
+                            if (internalMute != null && internalMute.getEndTime() != null) {
+                                plugin.scheduleMuteExpiry(internalMute);
+                            }
+                        }
                     }
                 }
             }
         }, 20L);
 
-        // Проверка истекших наказаний во время оффлайн (с задержкой)
+        // Проверка истекших наказаний во время оффлайн
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (player.isOnline()) {
                 checkAndExpirePunishments(player);
             }
         }, 40L);
 
-        // Отправка уведомлений, накопленных в БД (с задержкой)
+        // Получение уведомлений
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (player.isOnline()) {
-                List<Map<String, String>> notifications = plugin.getDatabase().getAndClearNotifications(player.getUniqueId());
+                List<Map<String, String>> notifications = plugin.getAndClearNotifications(player.getUniqueId());
                 for (Map<String, String> notif : notifications) {
                     String key = notif.remove("key");
                     if (key != null) {
@@ -76,8 +89,8 @@ public class LoginListener implements Listener {
         String ip = event.getAddress().getHostAddress();
         UUID uuid = player.getUniqueId();
 
-        // ===== IP-бан (синхронно, но через кэш) =====
-        if (plugin.getCacheManager().isIpBannedCached(ip)) {
+        // IP-бан – через старый метод, т.к. в API нет прямого метода для IP-бана
+        if (plugin.getDatabase().isIpBanned(ip)) {
             String rawMessage = MessageUtil.getRawMessage("banip_player");
             if (rawMessage == null) rawMessage = "&c✖ Ваш IP-адрес заблокирован.\nПричина: %reason%\nАдминистратор: %sender%";
             rawMessage = rawMessage.replace("%reason%", "IP-бан").replace("%sender%", "Консоль");
@@ -85,7 +98,7 @@ public class LoginListener implements Listener {
             return;
         }
 
-        // ===== GeoIP фильтрация (можно выполнять синхронно, т.к. это fast) =====
+        // GeoIP фильтрация (без изменений)
         if (plugin.getGeoIpManager().isReady()) {
             String countryCode = plugin.getGeoIpManager().getCountryCode(ip);
             String countryName = plugin.getGeoIpManager().getCountryName(ip);
@@ -112,51 +125,47 @@ public class LoginListener implements Listener {
             }
         }
 
-        // ===== Бан (синхронно, но через кэш) =====
-        Punishment ban = plugin.getCacheManager().getCachedActivePunishment(
-                uuid, PunishmentType.BAN, plugin.getServerName(), plugin.getMode()
-        );
-        if (ban == null) {
-            // Если в кэше нет, делаем синхронный запрос к БД (но это происходит редко, т.к. кэш живёт 30-60 секунд)
-            ban = plugin.getDatabase().getActivePunishment(uuid, PunishmentType.BAN, plugin.getServerName(), plugin.getMode());
-            if (ban != null) {
-                plugin.getCacheManager().cacheActivePunishment(uuid, PunishmentType.BAN, plugin.getServerName(), plugin.getMode(), ban);
+        // Бан – через новый API
+        CompletableFuture<Boolean> hasBanFuture = plugin.getApi().punishments().hasActive(uuid, me.demro.dlibs.dbans.api.punishment.PunishmentType.BAN);
+        if (hasBanFuture.join()) {
+            // Найдём сам бан
+            CompletableFuture<List<me.demro.dlibs.dbans.api.punishment.Punishment>> banListFuture = plugin.getApi().punishments().findActiveByTarget(uuid);
+            List<me.demro.dlibs.dbans.api.punishment.Punishment> bans = banListFuture.join();
+            if (!bans.isEmpty()) {
+                me.demro.dlibs.dbans.api.punishment.Punishment ban = bans.get(0);
+                String msgKey = ban.isPermanent() ? "ban_player" : "tempban_player";
+                String rawMessage = MessageUtil.getRawMessage(msgKey);
+                if (rawMessage == null) {
+                    rawMessage = ban.isPermanent() ?
+                            "&c✖ Вы были забанены навсегда.\nПричина: %reason%\nАдминистратор: %sender%\nСервер: %server%\nID: #%id%" :
+                            "&c✖ Вы были забанены на %duration%.\nПричина: %reason%\nАдминистратор: %sender%\nСервер: %server%\nID: #%id%";
+                }
+                String duration = ban.isPermanent() ?
+                        plugin.getConfig().getString("permanent_word", "навсегда") :
+                        TimeUtil.formatDuration(ban.expiresAt().get().toEpochMilli() - System.currentTimeMillis());
+                rawMessage = rawMessage.replace("%reason%", ban.reason().value())
+                        .replace("%sender%", ban.issuer().name())
+                        .replace("%duration%", duration)
+                        .replace("%server%", ban.serverName())
+                        .replace("%id%", ban.shortId());
+                event.disallow(PlayerLoginEvent.Result.KICK_BANNED, MessageUtil.deserializeForKick(rawMessage));
+                return;
             }
-        }
-        if (ban != null && !ban.isExpired()) {
-            String msgKey = ban.getEndTime() == null ? "ban_player" : "tempban_player";
-            String rawMessage = MessageUtil.getRawMessage(msgKey);
-            if (rawMessage == null) {
-                rawMessage = ban.getEndTime() == null ?
-                        "&c✖ Вы были забанены навсегда.\nПричина: %reason%\nАдминистратор: %sender%\nСервер: %server%\nID: #%id%" :
-                        "&c✖ Вы были забанены на %duration%.\nПричина: %reason%\nАдминистратор: %sender%\nСервер: %server%\nID: #%id%";
-            }
-            String duration = (ban.getEndTime() == null) ? plugin.getConfig().getString("permanent_word", "навсегда") : TimeUtil.formatDuration(ban.getEndTime() - System.currentTimeMillis());
-            rawMessage = rawMessage.replace("%reason%", ban.getReason())
-                    .replace("%sender%", ban.getIssuerName())
-                    .replace("%duration%", duration)
-                    .replace("%server%", ban.getServerName() != null ? ban.getServerName() : "unknown")
-                    .replace("%id%", ban.getId());
-            event.disallow(PlayerLoginEvent.Result.KICK_BANNED, MessageUtil.deserializeForKick(rawMessage));
         }
     }
 
-    private Punishment getGlobalActiveMute(UUID uuid) {
-        return plugin.getDatabase().getActivePunishment(uuid, PunishmentType.MUTE, null, "sync");
-    }
-
-    private void sendMuteNotification(Player player, Punishment mute) {
-        boolean isTemp = mute.getEndTime() != null;
+    private void sendMuteNotification(Player player, me.demro.dlibs.dbans.api.punishment.Punishment mute) {
+        boolean isTemp = !mute.isPermanent();
         String key = isTemp ? "tempmute_player" : "mute_player";
-        String durationStr = mute.getEndTime() == null
+        String durationStr = mute.isPermanent()
                 ? plugin.getConfig().getString("permanent_word", "навсегда")
-                : TimeUtil.formatDuration(mute.getEndTime() - System.currentTimeMillis());
+                : TimeUtil.formatDuration(mute.expiresAt().get().toEpochMilli() - System.currentTimeMillis());
         MessageUtil.send(player, key,
-                "sender", mute.getIssuerName(),
-                "reason", mute.getReason(),
+                "sender", mute.issuer().name(),
+                "reason", mute.reason().value(),
                 "duration", durationStr,
-                "server", mute.getServerName(),
-                "id", mute.getId());
+                "server", mute.serverName(),
+                "id", mute.shortId());
     }
 
     private void checkAndExpirePunishments(Player player) {
@@ -166,62 +175,53 @@ public class LoginListener implements Listener {
 
         long now = System.currentTimeMillis();
 
-        // Обычные наказания
-        List<Punishment> allPunishments = plugin.getDatabase().getPunishmentHistory(uuid, true);
-        for (Punishment p : allPunishments) {
-            if (p.getEndTime() != null && p.getEndTime() > lastSeen && p.getEndTime() <= now) {
-                if (p.isActive()) {
-                    p.setActive(false);
-                    plugin.getDatabase().updatePunishment(p);
-                    plugin.getLogger().info("🔄 [Expire] Deactivated expired punishment " + p.getId() + " for " + player.getName());
-                }
+        // Используем новый API для поиска всех активных наказаний
+        CompletableFuture<List<me.demro.dlibs.dbans.api.punishment.Punishment>> activeFuture = plugin.getApi().punishments().findActiveByTarget(uuid);
+        List<me.demro.dlibs.dbans.api.punishment.Punishment> active = activeFuture.join();
+        for (me.demro.dlibs.dbans.api.punishment.Punishment p : active) {
+            if (p.expiresAt().isPresent() && p.expiresAt().get().toEpochMilli() > lastSeen && p.expiresAt().get().toEpochMilli() <= now) {
                 sendOfflineExpireNotification(player, p);
             }
         }
 
-        // Jail
-        List<JailPunishment> allJails = plugin.getDatabase().getAllJailsForPlayer(uuid);
-        for (JailPunishment j : allJails) {
-            if (j.getEndTime() != null && j.getEndTime() > lastSeen && j.getEndTime() <= now) {
-                if (j.isActive()) {
-                    j.setActive(false);
-                    plugin.getDatabase().updateJail(j);
-                    plugin.getLogger().info("🔄 [Expire] Deactivated expired jail " + j.getId() + " for " + player.getName());
-                }
-                sendOfflineExpireNotification(player, j);
-            }
-        }
-
-        // Warnings
-        List<Warning> allWarnings = plugin.getDatabase().getAllWarningsForPlayer(uuid);
-        for (Warning w : allWarnings) {
-            if (w.getEndTime() != null && w.getEndTime() > lastSeen && w.getEndTime() <= now) {
-                if (w.isActive()) {
-                    w.setActive(false);
-                    plugin.getDatabase().updateWarning(w);
-                    plugin.getLogger().info("🔄 [Expire] Deactivated expired warning " + w.getId() + " for " + player.getName());
-                }
+        // Варны – через API
+        CompletableFuture<List<me.demro.dlibs.dbans.api.punishment.Punishment>> warningsFuture = plugin.getApi().punishments().find(
+                me.demro.dlibs.dbans.api.punishment.PunishmentQuery.builder()
+                        .targetUuid(uuid)
+                        .type(me.demro.dlibs.dbans.api.punishment.PunishmentType.WARNING)
+                        .status(me.demro.dlibs.dbans.api.punishment.PunishmentStatus.ACTIVE)
+                        .build()
+        );
+        List<me.demro.dlibs.dbans.api.punishment.Punishment> warnings = warningsFuture.join();
+        for (me.demro.dlibs.dbans.api.punishment.Punishment w : warnings) {
+            if (w.expiresAt().isPresent() && w.expiresAt().get().toEpochMilli() > lastSeen && w.expiresAt().get().toEpochMilli() <= now) {
                 sendOfflineExpireNotification(player, w);
             }
         }
+
+        // Джейлы – через API
+        CompletableFuture<List<me.demro.dlibs.dbans.api.punishment.Punishment>> jailsFuture = plugin.getApi().punishments().find(
+                me.demro.dlibs.dbans.api.punishment.PunishmentQuery.builder()
+                        .targetUuid(uuid)
+                        .type(me.demro.dlibs.dbans.api.punishment.PunishmentType.JAIL)
+                        .status(me.demro.dlibs.dbans.api.punishment.PunishmentStatus.ACTIVE)
+                        .build()
+        );
+        List<me.demro.dlibs.dbans.api.punishment.Punishment> jails = jailsFuture.join();
+        for (me.demro.dlibs.dbans.api.punishment.Punishment j : jails) {
+            if (j.expiresAt().isPresent() && j.expiresAt().get().toEpochMilli() > lastSeen && j.expiresAt().get().toEpochMilli() <= now) {
+                sendOfflineExpireNotification(player, j);
+            }
+        }
     }
 
-    private void sendOfflineExpireNotification(Player player, Punishment p) {
-        String typeKey = p.getType().name().toLowerCase();
+    private void sendOfflineExpireNotification(Player player, me.demro.dlibs.dbans.api.punishment.Punishment p) {
+        String typeKey = p.type().name().toLowerCase();
+        String duration = p.expiresAt().isPresent() ?
+                TimeUtil.formatDuration(p.expiresAt().get().toEpochMilli() - p.createdAt().toEpochMilli()) :
+                "навсегда";
         MessageUtil.send(player, "expire_offline_" + typeKey,
-                "id", p.getId(),
-                "duration", TimeUtil.formatDuration(p.getEndTime() - p.getStartTime()));
-    }
-
-    private void sendOfflineExpireNotification(Player player, JailPunishment j) {
-        MessageUtil.send(player, "expire_offline_jail",
-                "id", j.getId(),
-                "duration", TimeUtil.formatDuration(j.getEndTime() - j.getStartTime()));
-    }
-
-    private void sendOfflineExpireNotification(Player player, Warning w) {
-        MessageUtil.send(player, "expire_offline_warning",
-                "id", w.getId(),
-                "duration", TimeUtil.formatDuration(w.getEndTime() - w.getStartTime()));
+                "id", p.shortId(),
+                "duration", duration);
     }
 }

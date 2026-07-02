@@ -1,14 +1,17 @@
 package me.demro.dbans.util;
 
+import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
+import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.command.CommandSender;
 
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 public class PresetManager {
     private final DBans plugin;
     private final Map<String, PunishmentPreset> presets = new ConcurrentHashMap<>();
@@ -26,7 +29,10 @@ public class PresetManager {
         if (!file.exists()) plugin.saveResource("presets.yml", false);
         YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
         ConfigurationSection section = config.getConfigurationSection("presets");
-        if (section == null) return;
+        if (section == null) {
+            log.warn("No presets section found in presets.yml");
+            return;
+        }
 
         for (String key : section.getKeys(false)) {
             String reason = section.getString(key + ".reason");
@@ -38,10 +44,11 @@ public class PresetManager {
                 try {
                     duration = TimeUtil.parseDuration(durationStr);
                 } catch (IllegalArgumentException e) {
-                    plugin.getLogger().warning("Invalid duration in preset " + key + ": " + durationStr);
+                    log.warn("Invalid duration in preset {}: {}", key, durationStr);
                 }
             }
-            presets.put(key.toLowerCase(), new PunishmentPreset(key, reason, duration, durationStr, type, permission));
+            PunishmentPreset preset = new PunishmentPreset(key, reason, duration, durationStr, type, permission);
+            presets.put(key.toLowerCase(), preset);
         }
 
         for (PunishmentPreset preset : presets.values()) {
@@ -49,7 +56,7 @@ public class PresetManager {
                     .add("+" + preset.getName());
         }
 
-        plugin.getLogger().info("Loaded " + presets.size() + " punishment presets");
+        log.info("Loaded {} punishment presets", presets.size());
     }
 
     public PunishmentPreset getPreset(String name) {
@@ -80,6 +87,7 @@ public class PresetManager {
         return sender.hasPermission(preset.getPermission());
     }
 
+    @Data
     public static class PunishmentPreset {
         private final String name;
         private final String reason;
@@ -97,12 +105,8 @@ public class PresetManager {
             this.permission = permission;
         }
 
-        public String getName() { return name; }
-        public String getReason() { return reason; }
-        public Long getDuration() { return duration; }
-        public String getDurationRaw() { return durationRaw; }
-        public String getType() { return type; }
-        public String getPermission() { return permission; }
-        public boolean isPermanent() { return duration == null; }
+        public boolean isPermanent() {
+            return duration == null;
+        }
     }
 }

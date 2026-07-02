@@ -2,6 +2,7 @@ package me.demro.dbans.util.geo;
 
 import com.maxmind.geoip2.DatabaseReader;
 import com.maxmind.geoip2.model.CityResponse;
+import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -9,6 +10,7 @@ import java.io.File;
 import java.net.InetAddress;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 public class GeoIpManager {
     private final DBans plugin;
     private DatabaseReader reader;
@@ -37,12 +39,12 @@ public class GeoIpManager {
                         (System.currentTimeMillis() - dbFile.lastModified() > 7L * 24 * 60 * 60 * 1000);
 
                 if (needDownload) {
-                    plugin.getLogger().info("Downloading MaxMind GeoIP2 City database...");
+                    log.info("Downloading MaxMind GeoIP2 City database...");
                     String url = "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-City.mmdb";
                     if (HttpDownloader.downloadFile(url, dbFile)) {
-                        plugin.getLogger().info("MaxMind GeoIP database downloaded successfully.");
+                        log.info("MaxMind GeoIP database downloaded successfully.");
                     } else {
-                        plugin.getLogger().warning("Failed to download GeoIP database. Using existing file (if any).");
+                        log.warn("Failed to download GeoIP database. Using existing file (if any).");
                     }
                 }
 
@@ -50,12 +52,12 @@ public class GeoIpManager {
                     try {
                         reader = new DatabaseReader.Builder(dbFile).build();
                         ready = true;
-                        plugin.getLogger().info("MaxMind GeoIP database loaded from " + dbFile.getPath());
+                        log.info("MaxMind GeoIP database loaded from {}", dbFile.getPath());
                     } catch (Exception e) {
-                        plugin.getLogger().severe("Failed to load GeoIP database: " + e.getMessage());
+                        log.error("Failed to load GeoIP database: {}", e.getMessage(), e);
                     }
                 } else {
-                    plugin.getLogger().warning("No GeoIP database available. /geoip command will not work.");
+                    log.warn("No GeoIP database available. /geoip command will not work.");
                 }
             }
         }.runTaskAsynchronously(plugin);
@@ -121,7 +123,7 @@ public class GeoIpManager {
             locationCache.put(ip, location);
             return location;
         } catch (Exception e) {
-            plugin.getLogger().warning("Failed to get location for IP " + ip + ": " + e.getMessage());
+            log.warn("Failed to get location for IP {}: {}", ip, e.getMessage());
             return null;
         }
     }
