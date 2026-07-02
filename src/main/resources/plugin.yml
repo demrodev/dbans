@@ -1,11 +1,11 @@
-name: DBans
+name: dBans
 version: '${version}'
 main: me.demro.dbans.DBans
 api-version: '1.21'
 load: POSTWORLD
-authors: [DemRoDev]
-depend: [LuckPerms]
-softdepend: [PlaceholderAPI, Citizens]
+authors: [ DemRoDev ]
+depend: [ LuckPerms ]
+softdepend: [ PlaceholderAPI, Citizens ]
 libraries:
   - com.google.code.gson:gson:2.10.1
   - com.zaxxer:HikariCP:5.1.0
@@ -106,7 +106,7 @@ commands:
     description: Reload plugin configuration
     usage: /dban reload
     permission: dbans.dban.reload
-    aliases: [dbans]
+    aliases: [ dbans ]
   unbanip:
     description: Unban an IP address or mask
     usage: /unbanip <player|ip|mask> [#ID]
