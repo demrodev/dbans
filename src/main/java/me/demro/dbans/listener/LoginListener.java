@@ -12,6 +12,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Map;
@@ -23,12 +25,13 @@ public class LoginListener implements Listener {
 
     private final DBans plugin;
 
+    @Contract(pure = true)
     public LoginListener(DBans plugin) {
         this.plugin = plugin;
     }
 
     @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent event) {
+    public void onPlayerJoin(@NotNull PlayerJoinEvent event) {
         Player player = event.getPlayer();
         String ip = player.getAddress().getAddress().getHostAddress();
         PlayerInfo playerInfo = new PlayerInfo(player.getUniqueId(), player.getName(), ip, System.currentTimeMillis());
@@ -36,7 +39,7 @@ public class LoginListener implements Listener {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> plugin.getDatabase().savePlayer(playerInfo));
         plugin.getPlayerCache().update(player);
 
-        // Уведомление о глобальном муте – через новый API
+        // Уведомление о глобальном муте - через новый API
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (player.isOnline()) {
                 UUID uuid = player.getUniqueId();
@@ -47,7 +50,7 @@ public class LoginListener implements Listener {
                     CompletableFuture<List<me.demro.dlibs.dbans.api.punishment.Punishment>> muteListFuture = plugin.getApi().punishments().findActiveByTarget(uuid);
                     List<me.demro.dlibs.dbans.api.punishment.Punishment> mutes = muteListFuture.join();
                     if (!mutes.isEmpty()) {
-                        me.demro.dlibs.dbans.api.punishment.Punishment mute = mutes.get(0);
+                        me.demro.dlibs.dbans.api.punishment.Punishment mute = mutes.getFirst();
                         sendMuteNotification(player, mute);
                         // Планируем истечение, если временный
                         if (!mute.isPermanent()) {
@@ -89,7 +92,7 @@ public class LoginListener implements Listener {
         String ip = event.getAddress().getHostAddress();
         UUID uuid = player.getUniqueId();
 
-        // IP-бан – через старый метод, т.к. в API нет прямого метода для IP-бана
+        // IP-бан - через старый метод, т.к. в API нет прямого метода для IP-бана
         if (plugin.getDatabase().isIpBanned(ip)) {
             String rawMessage = MessageUtil.getRawMessage("banip_player");
             if (rawMessage == null)
@@ -112,7 +115,7 @@ public class LoginListener implements Listener {
                                                                   (codeOrName.equalsIgnoreCase(countryCode)) ||
                                                                   (codeOrName.equalsIgnoreCase(countryName)));
                 } else if (!blacklist.isEmpty()) {
-                    allowed = !blacklist.stream().anyMatch(codeOrName ->
+                    allowed = blacklist.stream().noneMatch(codeOrName ->
                                                                    (codeOrName.equalsIgnoreCase(countryCode)) ||
                                                                    (codeOrName.equalsIgnoreCase(countryName)));
                 }
@@ -126,14 +129,14 @@ public class LoginListener implements Listener {
             }
         }
 
-        // Бан – через новый API
+        // Бан - через новый API
         CompletableFuture<Boolean> hasBanFuture = plugin.getApi().punishments().hasActive(uuid, me.demro.dlibs.dbans.api.punishment.PunishmentType.BAN);
         if (hasBanFuture.join()) {
             // Найдём сам бан
             CompletableFuture<List<me.demro.dlibs.dbans.api.punishment.Punishment>> banListFuture = plugin.getApi().punishments().findActiveByTarget(uuid);
             List<me.demro.dlibs.dbans.api.punishment.Punishment> bans = banListFuture.join();
             if (!bans.isEmpty()) {
-                me.demro.dlibs.dbans.api.punishment.Punishment ban = bans.get(0);
+                me.demro.dlibs.dbans.api.punishment.Punishment ban = bans.getFirst();
                 String msgKey = ban.isPermanent() ? "ban_player" : "tempban_player";
                 String rawMessage = MessageUtil.getRawMessage(msgKey);
                 if (rawMessage == null) {
@@ -154,7 +157,7 @@ public class LoginListener implements Listener {
         }
     }
 
-    private void sendMuteNotification(Player player, me.demro.dlibs.dbans.api.punishment.Punishment mute) {
+    private void sendMuteNotification(Player player, me.demro.dlibs.dbans.api.punishment.@NotNull Punishment mute) {
         boolean isTemp = !mute.isPermanent();
         String key = isTemp ? "tempmute_player" : "mute_player";
         String durationStr = mute.isPermanent()
@@ -168,7 +171,7 @@ public class LoginListener implements Listener {
                          "id", mute.shortId());
     }
 
-    private void checkAndExpirePunishments(Player player) {
+    private void checkAndExpirePunishments(@NotNull Player player) {
         UUID uuid = player.getUniqueId();
         long lastSeen = plugin.getDatabase().getLastSeen(uuid);
         if (lastSeen <= 0) return;
@@ -184,7 +187,7 @@ public class LoginListener implements Listener {
             }
         }
 
-        // Варны – через API
+        // Варны - через API
         CompletableFuture<List<me.demro.dlibs.dbans.api.punishment.Punishment>> warningsFuture = plugin.getApi().punishments().find(
                 me.demro.dlibs.dbans.api.punishment.PunishmentQuery.builder()
                                                                    .targetUuid(uuid)
@@ -199,7 +202,7 @@ public class LoginListener implements Listener {
             }
         }
 
-        // Джейлы – через API
+        // Джейлы - через API
         CompletableFuture<List<me.demro.dlibs.dbans.api.punishment.Punishment>> jailsFuture = plugin.getApi().punishments().find(
                 me.demro.dlibs.dbans.api.punishment.PunishmentQuery.builder()
                                                                    .targetUuid(uuid)
@@ -215,7 +218,9 @@ public class LoginListener implements Listener {
         }
     }
 
-    private void sendOfflineExpireNotification(Player player, me.demro.dlibs.dbans.api.punishment.Punishment p) {
+    private void sendOfflineExpireNotification(Player player,
+                                               me.demro.dlibs.dbans.api.punishment.@NotNull Punishment p
+    ) {
         String typeKey = p.type().name().toLowerCase();
         String duration = p.expiresAt().isPresent() ?
                 TimeUtil.formatDuration(p.expiresAt().get().toEpochMilli() - p.createdAt().toEpochMilli()) :

@@ -10,12 +10,10 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -97,7 +95,7 @@ public class LimitsManager {
         log.info("Loaded limits for {} groups", groups.size());
     }
 
-    private CachedPlayerData getCachedPlayerData(UUID uuid) {
+    private @NotNull CachedPlayerData getCachedPlayerData(UUID uuid) {
         CachedPlayerData cached = playerDataCache.get(uuid);
         if (cached != null && (System.currentTimeMillis() - cached.timestamp) < CACHE_TTL_MS) {
             return cached;
@@ -109,30 +107,30 @@ public class LimitsManager {
         return cached;
     }
 
-    private String getPrimaryGroup(UUID uuid) {
+    private @NotNull String getPrimaryGroup(UUID uuid) {
         User user = luckPerms.getUserManager().getUser(uuid);
         if (user == null) return "default";
         String primary = user.getPrimaryGroup();
         return primary != null ? primary : "default";
     }
 
-    private String getPrimaryGroup(Player player) {
+    private @NotNull String getPrimaryGroup(@NotNull Player player) {
         return getPrimaryGroup(player.getUniqueId());
     }
 
-    private String getPrimaryGroup(OfflinePlayer player) {
+    private @NotNull String getPrimaryGroup(@NotNull OfflinePlayer player) {
         return getPrimaryGroup(player.getUniqueId());
     }
 
-    private GroupData getGroupData(Player player) {
+    private GroupData getGroupData(@NotNull Player player) {
         return getCachedPlayerData(player.getUniqueId()).data;
     }
 
-    private GroupData getGroupData(OfflinePlayer player) {
+    private GroupData getGroupData(@NotNull OfflinePlayer player) {
         return getCachedPlayerData(player.getUniqueId()).data;
     }
 
-    public long getMaxDuration(Player issuer, String type) {
+    public long getMaxDuration(@NotNull Player issuer, String type) {
         if (issuer.hasPermission("dbans.duration.bypass")) return -1L;
         if (issuer.hasPermission("dbans.duration." + type)) return -1L;
         GroupData data = getGroupData(issuer);
@@ -141,7 +139,7 @@ public class LimitsManager {
         return val != null ? val : -1L;
     }
 
-    public boolean isOnCooldown(Player player, String command) {
+    public boolean isOnCooldown(@NotNull Player player, String command) {
         if (player.hasPermission("dbans.cooldown.bypass")) return false;
         if (player.hasPermission("dbans.cooldown." + command)) return false;
         int seconds = getBaseCooldown(player, command);
@@ -152,7 +150,7 @@ public class LimitsManager {
         return (System.currentTimeMillis() - last) < seconds * 1000L;
     }
 
-    public int getRemainingCooldown(Player player, String command) {
+    public int getRemainingCooldown(@NotNull Player player, String command) {
         if (player.hasPermission("dbans.cooldown.bypass")) return 0;
         if (player.hasPermission("dbans.cooldown." + command)) return 0;
         int seconds = getBaseCooldown(player, command);
@@ -165,7 +163,7 @@ public class LimitsManager {
         return remaining > 0 ? (int) (remaining / 1000) : 0;
     }
 
-    public void setCooldown(Player player, String command) {
+    public void setCooldown(@NotNull Player player, String command) {
         if (player.hasPermission("dbans.cooldown.bypass")) return;
         if (player.hasPermission("dbans.cooldown." + command)) return;
         int seconds = getBaseCooldown(player, command);
@@ -181,11 +179,11 @@ public class LimitsManager {
         return val != null ? val : 0;
     }
 
-    public int getPriority(Player player) {
+    public int getPriority(@NotNull Player player) {
         return getCachedPlayerData(player.getUniqueId()).priority;
     }
 
-    public int getPriority(OfflinePlayer player) {
+    public int getPriority(@NotNull OfflinePlayer player) {
         return getCachedPlayerData(player.getUniqueId()).priority;
     }
 
@@ -201,7 +199,7 @@ public class LimitsManager {
         return data.immunities.contains(punishmentType);
     }
 
-    public boolean isImmune(Player target, String punishmentType) {
+    public boolean isImmune(@NotNull Player target, String punishmentType) {
         if (target.hasPermission("punishment." + punishmentType + ".immune")) return true;
         return hasGroupImmunity(target, punishmentType);
     }
@@ -225,7 +223,7 @@ public class LimitsManager {
         return true;
     }
 
-    public boolean canUseSilent(Player player, String command) {
+    public boolean canUseSilent(@NotNull Player player, String command) {
         if (player.hasPermission("dbans.silent.bypass")) return true;
         return player.hasPermission("dbans.silent." + command);
     }
@@ -235,7 +233,7 @@ public class LimitsManager {
         int priority = 0;
         Map<String, Long> maxDurations = new HashMap<>();
         Map<String, Integer> cooldowns = new HashMap<>();
-        List<String> immunities = java.util.Collections.emptyList();
+        List<String> immunities = Collections.emptyList();
     }
 
     private record CachedPlayerData(GroupData data, int priority, String group, long timestamp) {

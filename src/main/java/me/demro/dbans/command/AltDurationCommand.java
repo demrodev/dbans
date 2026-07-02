@@ -9,6 +9,7 @@ import me.demro.dlibs.dbans.api.punishment.PunishmentId;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -23,7 +24,7 @@ public class AltDurationCommand implements CommandExecutor {
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+    public boolean onCommand(CommandSender sender, @NotNull Command cmd, @NotNull String label, String[] args) {
         if (!sender.hasPermission("dbans.altduration")) {
             MessageUtil.send(sender, "no_permission");
             return true;

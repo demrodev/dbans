@@ -12,6 +12,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -21,12 +23,13 @@ public class ChatListener implements Listener {
 
     private final DBans plugin;
 
+    @Contract(pure = true)
     public ChatListener(DBans plugin) {
         this.plugin = plugin;
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
-    public void onChat(AsyncChatEvent event) {
+    public void onChat(@NotNull AsyncChatEvent event) {
         Player player = event.getPlayer();
         // Проверка мута через новый API
         CompletableFuture<Boolean> hasMuteFuture = plugin.getApi().punishments().hasActive(player.getUniqueId(), PunishmentType.MUTE);
@@ -34,13 +37,13 @@ public class ChatListener implements Listener {
             return;
         }
 
-        // Если есть мут – получаем его для деталей
+        // Если есть мут - получаем его для деталей
         CompletableFuture<List<Punishment>> muteListFuture = plugin.getApi().punishments().findActiveByTarget(player.getUniqueId());
         List<Punishment> mutes = muteListFuture.join();
         if (mutes.isEmpty()) {
             return;
         }
-        Punishment mute = mutes.get(0);
+        Punishment mute = mutes.getFirst();
         event.setCancelled(true);
         String duration = mute.isPermanent() ? "навсегда" : TimeUtil.formatDuration(mute.expiresAt().get().toEpochMilli() - System.currentTimeMillis());
         MessageUtil.send(player, "cannot_chat",
@@ -51,7 +54,7 @@ public class ChatListener implements Listener {
     }
 
     @EventHandler
-    public void onCommand(PlayerCommandPreprocessEvent event) {
+    public void onCommand(@NotNull PlayerCommandPreprocessEvent event) {
         Player player = event.getPlayer();
         // Проверка мута через API
         CompletableFuture<Boolean> hasMuteFuture = plugin.getApi().punishments().hasActive(player.getUniqueId(), PunishmentType.MUTE);

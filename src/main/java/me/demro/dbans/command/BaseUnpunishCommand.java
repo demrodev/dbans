@@ -11,6 +11,8 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +23,7 @@ public abstract class BaseUnpunishCommand implements CommandExecutor {
 
     protected final DBans plugin;
 
+    @Contract(pure = true)
     protected BaseUnpunishCommand(DBans plugin) {
         this.plugin = plugin;
     }
@@ -32,7 +35,9 @@ public abstract class BaseUnpunishCommand implements CommandExecutor {
     protected abstract String getOwnPermission();
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command cmd, @NotNull String label,
+                             String[] args
+    ) {
         boolean hasFull = sender.hasPermission(getFullPermission());
         boolean hasOwn = sender.hasPermission(getOwnPermission());
         if (!hasFull && !hasOwn) {
@@ -99,7 +104,7 @@ public abstract class BaseUnpunishCommand implements CommandExecutor {
             return true;
         }
 
-        // Иначе – по имени игрока
+        // Иначе - по имени игрока
         OfflinePlayer target = Bukkit.getOfflinePlayer(input);
         if (!target.hasPlayedBefore() && !target.isOnline()) {
             MessageUtil.send(sender, "player_not_found", "target", input);
@@ -128,7 +133,7 @@ public abstract class BaseUnpunishCommand implements CommandExecutor {
             return true;
         }
 
-        // Найдём ID активного наказания – через find с query
+        // Найдём ID активного наказания - через find с query
         PunishmentQuery query = PunishmentQuery.builder()
                                                .targetUuid(target.getUniqueId())
                                                .type(getType())

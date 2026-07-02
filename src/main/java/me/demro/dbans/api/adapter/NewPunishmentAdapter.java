@@ -7,6 +7,7 @@ import me.demro.dlibs.dbans.api.punishment.PunishmentId;
 import me.demro.dlibs.dbans.api.punishment.PunishmentIssuer;
 import me.demro.dlibs.dbans.api.punishment.PunishmentReason;
 import me.demro.dlibs.dbans.api.punishment.PunishmentStatus;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.Instant;
@@ -34,7 +35,7 @@ public final class NewPunishmentAdapter implements me.demro.dlibs.dbans.api.puni
     /**
      * Constructs an adapter from a standard {@link Punishment}.
      */
-    public NewPunishmentAdapter(Punishment p) {
+    public NewPunishmentAdapter(@NotNull Punishment p) {
         this.id = p.getId();
         this.targetUuid = p.getPlayerUuid();
         this.targetName = p.getPlayerName();
@@ -51,7 +52,7 @@ public final class NewPunishmentAdapter implements me.demro.dlibs.dbans.api.puni
     /**
      * Constructs an adapter from a {@link JailPunishment}.
      */
-    public NewPunishmentAdapter(JailPunishment j) {
+    public NewPunishmentAdapter(@NotNull JailPunishment j) {
         this.id = j.getId();
         this.targetUuid = j.getPlayerUuid();
         this.targetName = j.getPlayerName();
@@ -68,7 +69,7 @@ public final class NewPunishmentAdapter implements me.demro.dlibs.dbans.api.puni
     /**
      * Constructs an adapter from a {@link Warning}.
      */
-    public NewPunishmentAdapter(Warning w) {
+    public NewPunishmentAdapter(@NotNull Warning w) {
         this.id = w.getId();
         this.targetUuid = w.getPlayerUuid();
         this.targetName = w.getPlayerName();
@@ -82,8 +83,9 @@ public final class NewPunishmentAdapter implements me.demro.dlibs.dbans.api.puni
         this.serverName = w.getServerName();
     }
 
+    @Contract(pure = true)
     private static me.demro.dlibs.dbans.api.punishment.PunishmentType mapType(
-            me.demro.dbans.model.PunishmentType oldType
+            me.demro.dbans.model.@NotNull PunishmentType oldType
     ) {
         switch (oldType) {
             case BAN:
@@ -103,21 +105,25 @@ public final class NewPunishmentAdapter implements me.demro.dlibs.dbans.api.puni
         }
     }
 
+    @Contract(" -> new")
     @Override
     public @NotNull PunishmentId id() {
         return PunishmentId.of(id);
     }
 
+    @Contract(pure = true)
     @Override
     public @NotNull String shortId() {
         return id;
     }
 
+    @Contract(pure = true)
     @Override
     public @NotNull UUID targetUuid() {
         return targetUuid;
     }
 
+    @Contract(pure = true)
     @Override
     public @NotNull String targetName() {
         return targetName;
@@ -131,16 +137,19 @@ public final class NewPunishmentAdapter implements me.demro.dlibs.dbans.api.puni
         return PunishmentIssuer.player(issuerUuid, issuerName);
     }
 
+    @Contract(pure = true)
     @Override
     public @NotNull me.demro.dlibs.dbans.api.punishment.PunishmentType type() {
         return type;
     }
 
+    @Contract(" -> new")
     @Override
     public @NotNull PunishmentReason reason() {
         return PunishmentReason.of(reason);
     }
 
+    @Contract(pure = true)
     @Override
     public @NotNull Instant createdAt() {
         return Instant.ofEpochMilli(startTime);
@@ -162,6 +171,7 @@ public final class NewPunishmentAdapter implements me.demro.dlibs.dbans.api.puni
         return PunishmentStatus.ACTIVE;
     }
 
+    @Contract(pure = true)
     @Override
     public @NotNull String serverName() {
         return serverName != null ? serverName : "unknown";

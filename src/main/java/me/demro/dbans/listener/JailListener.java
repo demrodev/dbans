@@ -1,5 +1,6 @@
 package me.demro.dbans.listener;
 
+import io.papermc.paper.event.player.AsyncChatEvent;
 import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import me.demro.dbans.model.JailPunishment;
@@ -21,6 +22,8 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.*;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -31,29 +34,30 @@ public class JailListener implements Listener {
     private final DBans plugin;
     private final JailManager jailManager;
 
-    public JailListener(DBans plugin) {
+    @Contract(pure = true)
+    public JailListener(@NotNull DBans plugin) {
         this.plugin = plugin;
         this.jailManager = plugin.getJailManager();
     }
 
-    private boolean isInJailWorld(Player player) {
+    private boolean isInJailWorld(@NotNull Player player) {
         World w = player.getWorld();
         return w != null && w.getName().equals("jail");
     }
 
-    private boolean isJailed(Player player) {
+    private boolean isJailed(@NotNull Player player) {
         // Проверка через новый API
         CompletableFuture<Boolean> future = plugin.getApi().punishments().hasActive(player.getUniqueId(), PunishmentType.JAIL);
         return future.join();
     }
 
-    private boolean isAllowedCommand(String command) {
+    private boolean isAllowedCommand(@NotNull String command) {
         String cmd = command.toLowerCase();
         return cmd.startsWith("/jail") || cmd.startsWith("/unjail") || cmd.startsWith("/dbans") || cmd.startsWith("/help");
     }
 
     @EventHandler
-    public void onBlockBreak(BlockBreakEvent event) {
+    public void onBlockBreak(@NotNull BlockBreakEvent event) {
         Player p = event.getPlayer();
         if (isInJailWorld(p) && !p.hasPermission("dbans.jail.bypass") && isJailed(p)) {
             event.setCancelled(true);
@@ -62,7 +66,7 @@ public class JailListener implements Listener {
     }
 
     @EventHandler
-    public void onBlockPlace(BlockPlaceEvent event) {
+    public void onBlockPlace(@NotNull BlockPlaceEvent event) {
         Player p = event.getPlayer();
         if (isInJailWorld(p) && !p.hasPermission("dbans.jail.bypass") && isJailed(p)) {
             event.setCancelled(true);
@@ -71,7 +75,7 @@ public class JailListener implements Listener {
     }
 
     @EventHandler
-    public void onPlayerInteract(PlayerInteractEvent event) {
+    public void onPlayerInteract(@NotNull PlayerInteractEvent event) {
         Player p = event.getPlayer();
         if (isInJailWorld(p) && !p.hasPermission("dbans.jail.bypass") && isJailed(p)) {
             event.setCancelled(true);
@@ -80,7 +84,7 @@ public class JailListener implements Listener {
     }
 
     @EventHandler
-    public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
+    public void onPlayerInteractEntity(@NotNull PlayerInteractEntityEvent event) {
         Player p = event.getPlayer();
         if (isInJailWorld(p) && !p.hasPermission("dbans.jail.bypass") && isJailed(p)) {
             event.setCancelled(true);
@@ -88,7 +92,7 @@ public class JailListener implements Listener {
     }
 
     @EventHandler
-    public void onInventoryOpen(InventoryOpenEvent event) {
+    public void onInventoryOpen(@NotNull InventoryOpenEvent event) {
         if (event.getPlayer() instanceof Player p) {
             if (isInJailWorld(p) && !p.hasPermission("dbans.jail.bypass") && isJailed(p)) {
                 event.setCancelled(true);
@@ -98,7 +102,7 @@ public class JailListener implements Listener {
     }
 
     @EventHandler
-    public void onPlayerDropItem(PlayerDropItemEvent event) {
+    public void onPlayerDropItem(@NotNull PlayerDropItemEvent event) {
         Player p = event.getPlayer();
         if (isInJailWorld(p) && !p.hasPermission("dbans.jail.bypass") && isJailed(p)) {
             event.setCancelled(true);
@@ -106,7 +110,7 @@ public class JailListener implements Listener {
     }
 
     @EventHandler
-    public void onPlayerPickupItem(PlayerPickupItemEvent event) {
+    public void onPlayerPickupItem(@NotNull PlayerPickupItemEvent event) {
         Player p = event.getPlayer();
         if (isInJailWorld(p) && !p.hasPermission("dbans.jail.bypass") && isJailed(p)) {
             event.setCancelled(true);
@@ -114,7 +118,7 @@ public class JailListener implements Listener {
     }
 
     @EventHandler
-    public void onEntityDamage(EntityDamageEvent event) {
+    public void onEntityDamage(@NotNull EntityDamageEvent event) {
         if (event.getEntity() instanceof Player p) {
             if (isInJailWorld(p) && !p.hasPermission("dbans.jail.bypass") && isJailed(p)) {
                 event.setCancelled(true);
@@ -123,7 +127,7 @@ public class JailListener implements Listener {
     }
 
     @EventHandler
-    public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
+    public void onEntityDamageByEntity(@NotNull EntityDamageByEntityEvent event) {
         if (event.getDamager() instanceof Player p) {
             if (isInJailWorld(p) && !p.hasPermission("dbans.jail.bypass") && isJailed(p)) {
                 event.setCancelled(true);
@@ -137,7 +141,7 @@ public class JailListener implements Listener {
     }
 
     @EventHandler
-    public void onFoodLevelChange(FoodLevelChangeEvent event) {
+    public void onFoodLevelChange(@NotNull FoodLevelChangeEvent event) {
         if (event.getEntity() instanceof Player p) {
             if (isInJailWorld(p) && !p.hasPermission("dbans.jail.bypass") && isJailed(p)) {
                 event.setCancelled(true);
@@ -149,7 +153,7 @@ public class JailListener implements Listener {
     }
 
     @EventHandler
-    public void onPlayerCommandPreprocess(PlayerCommandPreprocessEvent event) {
+    public void onPlayerCommandPreprocess(@NotNull PlayerCommandPreprocessEvent event) {
         Player p = event.getPlayer();
         if (isInJailWorld(p) && !p.hasPermission("dbans.jail.bypass") && isJailed(p) && !isAllowedCommand(event.getMessage())) {
             event.setCancelled(true);
@@ -158,7 +162,7 @@ public class JailListener implements Listener {
     }
 
     @EventHandler
-    public void onPlayerTeleport(PlayerTeleportEvent event) {
+    public void onPlayerTeleport(@NotNull PlayerTeleportEvent event) {
         Player p = event.getPlayer();
         if (jailManager.isTeleportAllowed(p)) return;
         if (isInJailWorld(p) && !p.hasPermission("dbans.jail.bypass") && isJailed(p)) {
@@ -170,24 +174,24 @@ public class JailListener implements Listener {
     }
 
     @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent event) {
+    public void onPlayerJoin(@NotNull PlayerJoinEvent event) {
         Player p = event.getPlayer();
-        // Проверяем, есть ли активный джейл, и если игрок не в мире jail – телепортируем
+        // Проверяем, есть ли активный джейл, и если игрок не в мире jail - телепортируем
         CompletableFuture<Boolean> hasJailFuture = plugin.getApi().punishments().hasActive(p.getUniqueId(), PunishmentType.JAIL);
         if (hasJailFuture.join()) {
             // Получаем активный джейл для деталей
             CompletableFuture<List<Punishment>> jailListFuture = plugin.getApi().punishments().findActiveByTarget(p.getUniqueId());
             List<Punishment> jails = jailListFuture.join();
             if (!jails.isEmpty()) {
-                Punishment jail = jails.get(0);
-                // Если игрок не в мире jail – телепортируем (используем JailManager)
+                Punishment jail = jails.getFirst();
+                // Если игрок не в мире jail - телепортируем (используем JailManager)
                 if (!p.getWorld().getName().equals("jail")) {
                     // Получаем внутренний JailPunishment для location
                     JailPunishment internalJail = plugin.getDatabase().getActiveJail(p.getUniqueId());
                     if (internalJail != null && internalJail.getJailLocation() != null) {
                         p.teleport(internalJail.getJailLocation());
                     } else {
-                        // fallback – телепорт в спавн jail мира
+                        // fallback - телепорт в спавн jail мира
                         World w = Bukkit.getWorld("jail");
                         if (w != null) p.teleport(w.getSpawnLocation());
                     }
@@ -197,13 +201,13 @@ public class JailListener implements Listener {
                 jailManager.handlePlayerJoin(p);
             }
         } else {
-            // Если игрок в jail мире, но не jailed – телепортируем наружу
+            // Если игрок в jail мире, но не jailed - телепортируем наружу
             jailManager.teleportOutOfJailIfNeeded(p);
         }
     }
 
     @EventHandler
-    public void onPlayerMove(PlayerMoveEvent event) {
+    public void onPlayerMove(@NotNull PlayerMoveEvent event) {
         Player p = event.getPlayer();
         if (isJailed(p)) {
             Location from = event.getFrom();
@@ -219,7 +223,7 @@ public class JailListener implements Listener {
     }
 
     @EventHandler
-    public void onPlayerChat(AsyncPlayerChatEvent event) {
+    public void onPlayerChat(@NotNull AsyncChatEvent event) {
         Player p = event.getPlayer();
         if (isJailed(p)) {
             event.setCancelled(true);
@@ -241,14 +245,14 @@ public class JailListener implements Listener {
     }
 
     @EventHandler
-    public void onJailedCommandPreprocess(PlayerCommandPreprocessEvent event) {
+    public void onJailedCommandPreprocess(@NotNull PlayerCommandPreprocessEvent event) {
         Player p = event.getPlayer();
         if (isJailed(p)) {
             event.setCancelled(true);
             CompletableFuture<List<Punishment>> jailListFuture = plugin.getApi().punishments().findActiveByTarget(p.getUniqueId());
             List<Punishment> jails = jailListFuture.join();
             if (!jails.isEmpty()) {
-                Punishment jail = jails.get(0);
+                Punishment jail = jails.getFirst();
                 String duration = jail.isPermanent() ? "навсегда" : TimeUtil.formatDuration(jail.expiresAt().get().toEpochMilli() - System.currentTimeMillis());
                 MessageUtil.send(p, "jail_no_commands",
                                  "sender", jail.issuer().name(),

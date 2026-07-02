@@ -5,6 +5,7 @@ import me.demro.dbans.model.PlayerInfo;
 import me.demro.dlibs.dbans.api.player.PlayerAddress;
 import me.demro.dlibs.dbans.api.player.PlayerService;
 import org.bukkit.Bukkit;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.Instant;
@@ -16,6 +17,7 @@ public class PlayerServiceImpl implements PlayerService {
 
     private final DBans plugin;
 
+    @Contract(pure = true)
     public PlayerServiceImpl(DBans plugin) {
         this.plugin = plugin;
     }

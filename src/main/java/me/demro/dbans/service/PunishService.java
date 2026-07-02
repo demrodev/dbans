@@ -6,6 +6,7 @@ import me.demro.dbans.model.Punishment;
 import me.demro.dbans.model.PunishmentType;
 import me.demro.dlibs.dbans.api.player.PlayerIdentity;
 import me.demro.dlibs.dbans.api.punishment.*;
+import org.jetbrains.annotations.NotNull;
 
 import java.time.Duration;
 import java.util.UUID;
@@ -20,7 +21,7 @@ public class PunishService {
     private final DBans plugin;
     private final PunishmentService punishmentService;
 
-    public PunishService(DBans plugin) {
+    public PunishService(@NotNull DBans plugin) {
         this.plugin = plugin;
         this.punishmentService = plugin.getApi().punishments();
     }

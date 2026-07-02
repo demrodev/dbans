@@ -24,8 +24,10 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -113,7 +115,7 @@ public class PunishmentServiceImpl implements PunishmentService {
         }
 
         // Создание объекта наказания в зависимости от типа
-        Object internalPunishment = null;
+        Object internalPunishment;
         try {
             if (internalType == PunishmentType.JAIL) {
                 // Джейл требует онлайн-игрока
@@ -122,7 +124,7 @@ public class PunishmentServiceImpl implements PunishmentService {
                     return CompletableFuture.failedFuture(new PlayerNotFoundException("Player must be online for jail"));
                 }
                 Location previousLocation = online.getLocation().clone();
-                long duration = request.duration().temporaryDuration().map(d -> d.toMillis()).orElse(0L);
+                long duration = request.duration().temporaryDuration().map(Duration::toMillis).orElse(0L);
                 String jailId = plugin.getJailManager().sendToJail(
                         online,
                         duration > 0 ? duration : null,
@@ -238,7 +240,7 @@ public class PunishmentServiceImpl implements PunishmentService {
                     plugin.getMode(),
                     (Punishment) internalPunishment
             );
-            // Если мут – планируем истечение
+            // Если мут - планируем истечение
             if (internalType == PunishmentType.MUTE && endTime != null) {
                 plugin.scheduleMuteExpiry((Punishment) internalPunishment);
             }
@@ -247,7 +249,7 @@ public class PunishmentServiceImpl implements PunishmentService {
         return CompletableFuture.completedFuture(new PunishmentCreateResult(apiPunishment));
     }
 
-    private void applyEffects(Object punishment, PunishmentCreateRequest request) {
+    private void applyEffects(Object punishment, @NotNull PunishmentCreateRequest request) {
         Player player = Bukkit.getPlayer(request.target().uuid().orElse(null));
         if (player == null || !player.isOnline()) return;
 
@@ -325,7 +327,7 @@ public class PunishmentServiceImpl implements PunishmentService {
         }
     }
 
-    private void broadcastPunishment(Object punishment, PunishmentCreateRequest request) {
+    private void broadcastPunishment(Object punishment, @NotNull PunishmentCreateRequest request) {
         String key = null;
         String permission = null;
         boolean temp = false;
@@ -503,37 +505,42 @@ public class PunishmentServiceImpl implements PunishmentService {
         String targetName = "";
         String id = "";
 
-        if (punishment instanceof Punishment p) {
-            targetName = p.getPlayerName();
-            id = p.getId();
-            switch (p.getType()) {
-                case BAN:
-                    key = "unban_broadcast";
-                    permission = "dbans.notify.unban";
-                    break;
-                case MUTE:
-                    key = "unmute_broadcast";
-                    permission = "dbans.notify.unmute";
-                    break;
-                case IPBAN:
-                    key = "unbanip_broadcast";
-                    permission = "dbans.notify.unbanip";
-                    break;
-                default:
-                    return;
+        switch (punishment) {
+            case Punishment p -> {
+                targetName = p.getPlayerName();
+                id = p.getId();
+                switch (p.getType()) {
+                    case BAN:
+                        key = "unban_broadcast";
+                        permission = "dbans.notify.unban";
+                        break;
+                    case MUTE:
+                        key = "unmute_broadcast";
+                        permission = "dbans.notify.unmute";
+                        break;
+                    case IPBAN:
+                        key = "unbanip_broadcast";
+                        permission = "dbans.notify.unbanip";
+                        break;
+                    default:
+                        return;
+                }
             }
-        } else if (punishment instanceof JailPunishment j) {
-            targetName = j.getPlayerName();
-            id = j.getId();
-            key = "unjail_broadcast";
-            permission = "dbans.notify.unjail";
-        } else if (punishment instanceof Warning w) {
-            targetName = w.getPlayerName();
-            id = w.getId();
-            key = "unwarn_broadcast";
-            permission = "dbans.notify.unwarn";
-        } else {
-            return;
+            case JailPunishment j -> {
+                targetName = j.getPlayerName();
+                id = j.getId();
+                key = "unjail_broadcast";
+                permission = "dbans.notify.unjail";
+            }
+            case Warning w -> {
+                targetName = w.getPlayerName();
+                id = w.getId();
+                key = "unwarn_broadcast";
+                permission = "dbans.notify.unwarn";
+            }
+            case null, default -> {
+                return;
+            }
         }
 
         if (key != null) {
@@ -593,7 +600,7 @@ public class PunishmentServiceImpl implements PunishmentService {
                 }
             }
         } else {
-            // Без targetUuid – ищем все
+            // Без targetUuid - ищем все
             List<Punishment> allP = plugin.getDatabase().getAllPunishments();
             List<JailPunishment> allJ = plugin.getDatabase().getAllJailsForAllPlayers();
             List<Warning> allW = plugin.getDatabase().getAllWarnings();
@@ -654,41 +661,35 @@ public class PunishmentServiceImpl implements PunishmentService {
         return false;
     }
 
-    private PunishmentStatus getStatus(Punishment p) {
+    private PunishmentStatus getStatus(@NotNull Punishment p) {
         if (!p.isActive()) return PunishmentStatus.REVOKED;
         if (p.isExpired()) return PunishmentStatus.EXPIRED;
         return PunishmentStatus.ACTIVE;
     }
 
-    private PunishmentStatus getStatus(JailPunishment j) {
+    private PunishmentStatus getStatus(@NotNull JailPunishment j) {
         if (!j.isActive()) return PunishmentStatus.REVOKED;
         if (j.isExpired()) return PunishmentStatus.EXPIRED;
         return PunishmentStatus.ACTIVE;
     }
 
-    private PunishmentStatus getStatus(Warning w) {
+    private PunishmentStatus getStatus(@NotNull Warning w) {
         if (!w.isActive()) return PunishmentStatus.REVOKED;
         if (w.isExpired()) return PunishmentStatus.EXPIRED;
         return PunishmentStatus.ACTIVE;
     }
 
-    private me.demro.dlibs.dbans.api.punishment.PunishmentType mapType(PunishmentType internalType) {
-        switch (internalType) {
-            case BAN:
-                return me.demro.dlibs.dbans.api.punishment.PunishmentType.BAN;
-            case MUTE:
-                return me.demro.dlibs.dbans.api.punishment.PunishmentType.MUTE;
-            case KICK:
-                return me.demro.dlibs.dbans.api.punishment.PunishmentType.KICK;
-            case IPBAN:
-                return me.demro.dlibs.dbans.api.punishment.PunishmentType.IP_BAN;
-            case JAIL:
-                return me.demro.dlibs.dbans.api.punishment.PunishmentType.JAIL;
-            case WARNING:
-                return me.demro.dlibs.dbans.api.punishment.PunishmentType.WARNING;
-            default:
-                throw new IllegalArgumentException("Unknown type: " + internalType);
-        }
+    @Contract(pure = true)
+    private me.demro.dlibs.dbans.api.punishment.PunishmentType mapType(@NotNull PunishmentType internalType) {
+        return switch (internalType) {
+            case BAN -> me.demro.dlibs.dbans.api.punishment.PunishmentType.BAN;
+            case MUTE -> me.demro.dlibs.dbans.api.punishment.PunishmentType.MUTE;
+            case KICK -> me.demro.dlibs.dbans.api.punishment.PunishmentType.KICK;
+            case IPBAN -> me.demro.dlibs.dbans.api.punishment.PunishmentType.IP_BAN;
+            case JAIL -> me.demro.dlibs.dbans.api.punishment.PunishmentType.JAIL;
+            case WARNING -> me.demro.dlibs.dbans.api.punishment.PunishmentType.WARNING;
+            default -> throw new IllegalArgumentException("Unknown type: " + internalType);
+        };
     }
 
     @Override
@@ -696,46 +697,37 @@ public class PunishmentServiceImpl implements PunishmentService {
                                                          @NotNull me.demro.dlibs.dbans.api.punishment.PunishmentType type
     ) {
         // Проверка в зависимости от типа
-        switch (type) {
-            case BAN:
-            case MUTE:
-            case IP_BAN:
+        return switch (type) {
+            case BAN, MUTE, IP_BAN -> {
                 Punishment p = plugin.getDatabase().getActivePunishment(
                         targetUuid,
                         mapTypeToInternal(type),
                         plugin.getServerName(),
                         plugin.getMode()
                 );
-                return CompletableFuture.completedFuture(p != null && p.isActive() && !p.isExpired());
-            case JAIL:
+                yield CompletableFuture.completedFuture(p != null && p.isActive() && !p.isExpired());
+            }
+            case JAIL -> {
                 JailPunishment j = plugin.getDatabase().getActiveJail(targetUuid);
-                return CompletableFuture.completedFuture(j != null && j.isActive() && !j.isExpired());
-            case WARNING:
+                yield CompletableFuture.completedFuture(j != null && j.isActive() && !j.isExpired());
+            }
+            case WARNING -> {
                 List<Warning> warnings = plugin.getDatabase().getActiveWarnings(targetUuid);
-                return CompletableFuture.completedFuture(!warnings.isEmpty());
-            case KICK:
-                return CompletableFuture.completedFuture(false);
-            default:
-                return CompletableFuture.completedFuture(false);
-        }
+                yield CompletableFuture.completedFuture(!warnings.isEmpty());
+            }
+            case KICK -> CompletableFuture.completedFuture(false);
+        };
     }
 
-    private PunishmentType mapTypeToInternal(me.demro.dlibs.dbans.api.punishment.PunishmentType apiType) {
-        switch (apiType) {
-            case BAN:
-                return PunishmentType.BAN;
-            case MUTE:
-                return PunishmentType.MUTE;
-            case KICK:
-                return PunishmentType.KICK;
-            case IP_BAN:
-                return PunishmentType.IPBAN;
-            case JAIL:
-                return PunishmentType.JAIL;
-            case WARNING:
-                return PunishmentType.WARNING;
-            default:
-                throw new IllegalArgumentException("Unsupported type: " + apiType);
-        }
+    @Contract(pure = true)
+    private PunishmentType mapTypeToInternal(me.demro.dlibs.dbans.api.punishment.@NotNull PunishmentType apiType) {
+        return switch (apiType) {
+            case BAN -> PunishmentType.BAN;
+            case MUTE -> PunishmentType.MUTE;
+            case KICK -> PunishmentType.KICK;
+            case IP_BAN -> PunishmentType.IPBAN;
+            case JAIL -> PunishmentType.JAIL;
+            case WARNING -> PunishmentType.WARNING;
+        };
     }
 }

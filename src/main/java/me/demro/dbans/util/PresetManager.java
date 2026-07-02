@@ -5,6 +5,8 @@ import me.demro.dbans.DBans;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.util.*;
@@ -59,7 +61,7 @@ public class PresetManager {
         log.info("Loaded {} punishment presets", presets.size());
     }
 
-    public PunishmentPreset getPreset(String name) {
+    public PunishmentPreset getPreset(@NotNull String name) {
         return presets.get(name.toLowerCase());
     }
 
@@ -77,11 +79,11 @@ public class PresetManager {
         return result;
     }
 
-    public List<String> getPresetNamesByType(String type) {
+    public List<String> getPresetNamesByType(@NotNull String type) {
         return presetNamesByType.getOrDefault(type.toLowerCase(), Collections.emptyList());
     }
 
-    public boolean canUsePreset(CommandSender sender, PunishmentPreset preset) {
+    public boolean canUsePreset(@NotNull CommandSender sender, PunishmentPreset preset) {
         if (sender.hasPermission("dbans.presets.bypass")) return true;
         if (preset.permission() == null || preset.permission().isEmpty()) return true;
         return sender.hasPermission(preset.permission());
@@ -90,6 +92,7 @@ public class PresetManager {
     public record PunishmentPreset(String name, String reason, Long duration, String durationRaw, String type,
                                    String permission) {
 
+        @Contract(pure = true)
         public boolean isPermanent() {
             return duration == null;
         }

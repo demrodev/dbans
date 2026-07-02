@@ -9,6 +9,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.util.HashMap;
@@ -20,7 +22,7 @@ import java.util.regex.Pattern;
 public class MessageUtil {
 
     private static final Map<String, String> cache = new HashMap<>();
-    private static final Pattern HOVER_PATTERN = Pattern.compile("\\{hover:(.+)\\}$", Pattern.DOTALL);
+    private static final Pattern HOVER_PATTERN = Pattern.compile("\\{hover:(.+)}$", Pattern.DOTALL);
     private static final Pattern HEX_PATTERN = Pattern.compile("&#([A-Fa-f0-9]{6})");
     private static final LegacyComponentSerializer CHAT_SERIALIZER = LegacyComponentSerializer.builder()
                                                                                               .character('&')
@@ -46,6 +48,7 @@ public class MessageUtil {
         messagesConfig = YamlConfiguration.loadConfiguration(file);
     }
 
+    @Contract("null -> null")
     public static String getRawMessage(String key) {
         if (key == null) return null;
         String cached = cache.get(key);
@@ -66,7 +69,7 @@ public class MessageUtil {
         return null;
     }
 
-    private static String replacePlaceholders(String message, Object... placeholders) {
+    private static String replacePlaceholders(String message, Object @NotNull ... placeholders) {
         String result = message;
         String prefix = plugin.getConfig().getString("prefix", "");
         String permanent = plugin.getConfig().getString("permanent_word", "навсегда");
@@ -79,6 +82,7 @@ public class MessageUtil {
         return result;
     }
 
+    @Contract("null, _ -> !null")
     public static Component deserialize(String message, Object... placeholders) {
         if (message == null) return Component.empty();
         String processed = replacePlaceholders(message, placeholders);
@@ -96,7 +100,7 @@ public class MessageUtil {
         return component;
     }
 
-    public static String serializeForKick(String message, Object... placeholders) {
+    public static @NotNull String serializeForKick(String message, Object... placeholders) {
         if (message == null) return "";
         String processed = replacePlaceholders(message, placeholders);
         String withoutHover = HOVER_PATTERN.matcher(processed).replaceAll("");
@@ -104,12 +108,12 @@ public class MessageUtil {
         return withoutHex.replace('&', '§');
     }
 
-    public static Component deserializeForKick(String message, Object... placeholders) {
+    public static @NotNull Component deserializeForKick(String message, Object... placeholders) {
         String plain = serializeForKick(message, placeholders);
         return Component.text(plain);
     }
 
-    public static String colorize(String message, Object... placeholders) {
+    public static @NotNull String colorize(String message, Object... placeholders) {
         if (message == null) return "";
         String processed = replacePlaceholders(message, placeholders);
         Matcher hoverMatcher = HOVER_PATTERN.matcher(processed);
@@ -120,7 +124,7 @@ public class MessageUtil {
         return LegacyComponentSerializer.legacySection().serialize(component);
     }
 
-    public static String colorize(String message) {
+    public static @NotNull String colorize(String message) {
         return colorize(message, new Object[0]);
     }
 

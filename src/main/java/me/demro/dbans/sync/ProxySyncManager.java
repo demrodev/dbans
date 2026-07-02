@@ -12,6 +12,7 @@ import me.demro.dbans.util.TimeUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.messaging.PluginMessageListener;
+import org.jetbrains.annotations.NotNull;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -33,8 +34,6 @@ public class ProxySyncManager implements PluginMessageListener {
         String mode = plugin.getMode();
         return mode.equalsIgnoreCase("sync") || mode.equalsIgnoreCase("sync_static");
     }
-
-    // ==================== ОТПРАВКА СООБЩЕНИЙ ====================
 
     private void sendMessage(SyncMessage msg) {
         if (!isSyncEnabled()) {
@@ -85,10 +84,8 @@ public class ProxySyncManager implements PluginMessageListener {
         sendPunishmentRevoke(warningToPunishment(warning));
     }
 
-    // ==================== ПРИЁМ СООБЩЕНИЙ ====================
-
     @Override
-    public void onPluginMessageReceived(String channel, Player player, byte[] message) {
+    public void onPluginMessageReceived(@NotNull String channel, @NotNull Player player, byte[] message) {
         if (!channel.equals(Constants.CHANNEL_NAME)) return;
         if (processingIncoming) return;
 
@@ -105,7 +102,7 @@ public class ProxySyncManager implements PluginMessageListener {
         }
     }
 
-    private void handleIncomingMessage(SyncMessage msg) {
+    private void handleIncomingMessage(@NotNull SyncMessage msg) {
         String type = msg.getType();
         Map<String, Object> data = msg.getData();
 
@@ -150,8 +147,6 @@ public class ProxySyncManager implements PluginMessageListener {
         }
     }
 
-    // ===== Обработка обычных наказаний =====
-
     private void handleDefault(String type, Punishment punishment) {
         if (!shouldApplyLocally(punishment)) {
             log.info("⏭️ [Sync] Skipping apply for server {}", plugin.getServerName());
@@ -159,26 +154,30 @@ public class ProxySyncManager implements PluginMessageListener {
         }
 
         if ("punishment_create".equals(type) || "punishment_modify".equals(type) || "punishment_expire".equals(type)) {
-            if ("punishment_create".equals(type)) {
-                Punishment existing = plugin.getDatabase().getPunishmentById(punishment.getId());
-                if (existing == null) {
-                    plugin.getDatabase().savePunishment(punishment);
-                } else {
-                    plugin.getDatabase().updatePunishment(punishment);
-                }
-            } else if ("punishment_modify".equals(type)) {
-                plugin.getDatabase().updatePunishment(punishment);
-                if (punishment.getType() == PunishmentType.MUTE) {
-                    plugin.cancelMuteExpiry(punishment.getId());
-                    if (punishment.isActive() && punishment.getEndTime() != null && punishment.getEndTime() > System.currentTimeMillis()) {
-                        plugin.scheduleMuteExpiry(punishment);
+            switch (type) {
+                case "punishment_create" -> {
+                    Punishment existing = plugin.getDatabase().getPunishmentById(punishment.getId());
+                    if (existing == null) {
+                        plugin.getDatabase().savePunishment(punishment);
+                    } else {
+                        plugin.getDatabase().updatePunishment(punishment);
                     }
                 }
-            } else if ("punishment_expire".equals(type)) {
-                punishment.setActive(false);
-                plugin.getDatabase().updatePunishment(punishment);
-                if (punishment.getType() == PunishmentType.MUTE) {
-                    plugin.cancelMuteExpiry(punishment.getId());
+                case "punishment_modify" -> {
+                    plugin.getDatabase().updatePunishment(punishment);
+                    if (punishment.getType() == PunishmentType.MUTE) {
+                        plugin.cancelMuteExpiry(punishment.getId());
+                        if (punishment.isActive() && punishment.getEndTime() != null && punishment.getEndTime() > System.currentTimeMillis()) {
+                            plugin.scheduleMuteExpiry(punishment);
+                        }
+                    }
+                }
+                case "punishment_expire" -> {
+                    punishment.setActive(false);
+                    plugin.getDatabase().updatePunishment(punishment);
+                    if (punishment.getType() == PunishmentType.MUTE) {
+                        plugin.cancelMuteExpiry(punishment.getId());
+                    }
                 }
             }
         } else if ("punishment_revoke".equals(type)) {
@@ -195,8 +194,6 @@ public class ProxySyncManager implements PluginMessageListener {
             removeLocalEffects(punishment);
         }
     }
-
-    // ===== Обработка предупреждений =====
 
     private void handleWarning(String type, Punishment punishment) {
         if (!shouldApplyLocally(punishment)) {
@@ -249,8 +246,6 @@ public class ProxySyncManager implements PluginMessageListener {
             }
         }
     }
-
-    // ===== Обработка тюрьмы =====
 
     private void handleJail(String type, Punishment punishment) {
         if (!shouldApplyLocally(punishment)) {
@@ -307,8 +302,6 @@ public class ProxySyncManager implements PluginMessageListener {
         }
     }
 
-    // ===== Вспомогательные методы =====
-
     private boolean shouldApplyLocally(Punishment punishment) {
         String mode = plugin.getMode();
         if ("sync_static".equalsIgnoreCase(mode)) {
@@ -317,8 +310,6 @@ public class ProxySyncManager implements PluginMessageListener {
         }
         return true;
     }
-
-    // ===== Уведомления с fallback в БД =====
 
     private void notifyOrStore(UUID playerUuid, String messageKey, Map<String, String> placeholders) {
         Player player = Bukkit.getPlayer(playerUuid);
@@ -331,9 +322,7 @@ public class ProxySyncManager implements PluginMessageListener {
         }
     }
 
-    // ===== Применение локальных эффектов =====
-
-    private void applyLocalEffects(Punishment punishment) {
+    private void applyLocalEffects(@NotNull Punishment punishment) {
         Player player = Bukkit.getPlayer(punishment.getPlayerUuid());
         if (player == null || !player.isOnline()) return;
 
@@ -400,7 +389,7 @@ public class ProxySyncManager implements PluginMessageListener {
         }
     }
 
-    private void removeLocalEffects(Punishment punishment) {
+    private void removeLocalEffects(@NotNull Punishment punishment) {
         Player player = Bukkit.getPlayer(punishment.getPlayerUuid());
         if (player == null || !player.isOnline()) return;
 
@@ -418,9 +407,7 @@ public class ProxySyncManager implements PluginMessageListener {
         }
     }
 
-    // ===== Преобразования =====
-
-    private Map<String, Object> punishmentToMap(Punishment p) {
+    private @NotNull Map<String, Object> punishmentToMap(@NotNull Punishment p) {
         Map<String, Object> map = new HashMap<>();
         map.put("id", p.getId());
         map.put("playerUuid", p.getPlayerUuid().toString());
@@ -439,7 +426,7 @@ public class ProxySyncManager implements PluginMessageListener {
         return map;
     }
 
-    private Punishment jailToPunishment(JailPunishment jail) {
+    private Punishment jailToPunishment(@NotNull JailPunishment jail) {
         return Punishment.builder()
                          .id(jail.getId())
                          .playerUuid(jail.getPlayerUuid())
@@ -457,7 +444,7 @@ public class ProxySyncManager implements PluginMessageListener {
                          .build();
     }
 
-    private Punishment warningToPunishment(Warning warning) {
+    private Punishment warningToPunishment(@NotNull Warning warning) {
         return Punishment.builder()
                          .id(warning.getId())
                          .playerUuid(warning.getPlayerUuid())

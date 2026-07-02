@@ -5,6 +5,8 @@ import me.demro.dbans.model.Punishment;
 import me.demro.dbans.model.Warning;
 import me.demro.dlibs.dbans.api.punishment.PunishmentCreateRequest;
 import me.demro.dlibs.dbans.api.punishment.PunishmentDuration;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
 
@@ -13,6 +15,7 @@ import java.util.UUID;
  */
 public final class PunishmentMapper {
 
+    @Contract(pure = true)
     private PunishmentMapper() {
     }
 
@@ -20,7 +23,7 @@ public final class PunishmentMapper {
      * Converts a {@link PunishmentCreateRequest} into an internal {@link Punishment} builder.
      * This does NOT save the punishment, only prepares the builder.
      */
-    public static Punishment.PunishmentBuilder toInternalPunishment(PunishmentCreateRequest request) {
+    public static Punishment.@NotNull PunishmentBuilder toInternalPunishment(@NotNull PunishmentCreateRequest request) {
         Punishment.PunishmentBuilder builder = Punishment.builder()
                                                          .playerUuid(request.target().uuid().orElseThrow(() -> new IllegalArgumentException("Target UUID required")))
                                                          .playerName(request.target().name().orElse("Unknown"))
@@ -76,7 +79,8 @@ public final class PunishmentMapper {
     /**
      * Creates a new API {@link me.demro.dlibs.dbans.api.punishment.Punishment} instance from any internal model.
      */
-    public static me.demro.dlibs.dbans.api.punishment.Punishment toApiPunishment(Object internal) {
+    @Contract("null -> fail")
+    public static me.demro.dlibs.dbans.api.punishment.@NotNull Punishment toApiPunishment(Object internal) {
         if (internal instanceof Punishment) {
             return new NewPunishmentAdapter((Punishment) internal);
         } else if (internal instanceof JailPunishment) {

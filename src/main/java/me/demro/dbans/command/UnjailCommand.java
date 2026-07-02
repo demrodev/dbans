@@ -5,6 +5,7 @@ import me.demro.dbans.util.MessageUtil;
 import me.demro.dlibs.dbans.api.punishment.PunishmentType;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.jetbrains.annotations.NotNull;
 
 public class UnjailCommand extends BaseUnpunishCommand {
 
@@ -28,7 +29,9 @@ public class UnjailCommand extends BaseUnpunishCommand {
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull @NotNull Command cmd,
+                             @NotNull @NotNull String label, String[] args
+    ) {
         if (!plugin.getConfig().getBoolean("jail.enabled", true)) {
             MessageUtil.send(sender, "jail_disabled");
             return true;

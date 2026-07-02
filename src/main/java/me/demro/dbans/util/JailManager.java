@@ -5,6 +5,10 @@ import me.demro.dbans.DBans;
 import me.demro.dbans.model.JailPunishment;
 import me.demro.dbans.model.Punishment;
 import me.demro.dbans.model.PunishmentType;
+import net.citizensnpcs.api.CitizensAPI;
+import net.citizensnpcs.api.npc.NPC;
+import net.citizensnpcs.api.npc.NPCRegistry;
+import net.citizensnpcs.trait.LookClose;
 import org.bukkit.*;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
@@ -14,6 +18,8 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -193,20 +199,20 @@ public class JailManager {
         return id;
     }
 
-    private void applyJailEffects(Player player) {
+    private void applyJailEffects(@NotNull Player player) {
         player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 1, false, false));
         player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, Integer.MAX_VALUE, 255, false, false));
         player.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, Integer.MAX_VALUE, 10, false, false));
         player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, Integer.MAX_VALUE, 1, false, false));
     }
 
-    private Object createNPC(World world, Location loc, String name) {
+    private @Nullable Object createNPC(World world, Location loc, String name) {
         if (citizensEnabled) {
             try {
-                net.citizensnpcs.api.npc.NPCRegistry registry = net.citizensnpcs.api.CitizensAPI.getNPCRegistry();
-                net.citizensnpcs.api.npc.NPC npc = registry.createNPC(EntityType.PLAYER, name);
+                NPCRegistry registry = CitizensAPI.getNPCRegistry();
+                NPC npc = registry.createNPC(EntityType.PLAYER, name);
                 npc.spawn(loc);
-                npc.getOrAddTrait(net.citizensnpcs.trait.LookClose.class).toggle();
+                npc.getOrAddTrait(LookClose.class).toggle();
                 npc.setProtected(true);
                 return npc;
             } catch (Throwable e) {
@@ -226,11 +232,11 @@ public class JailManager {
     }
 
     private void destroyNPC(Object npc) {
-        if (npc == null) return;
-        if (citizensEnabled && npc instanceof net.citizensnpcs.api.npc.NPC) {
-            ((net.citizensnpcs.api.npc.NPC) npc).destroy();
-        } else if (npc instanceof ArmorStand) {
-            ((ArmorStand) npc).remove();
+        switch (npc) {
+            case NPC npc1 when citizensEnabled -> npc1.destroy();
+            case ArmorStand armorStand -> armorStand.remove();
+            case null, default -> {
+            }
         }
     }
 
@@ -253,7 +259,7 @@ public class JailManager {
         phraseTasks.put(player.getUniqueId(), task);
     }
 
-    private void startLightning(Player player) {
+    private void startLightning(@NotNull Player player) {
         BukkitTask task = new BukkitRunnable() {
             @Override
             public void run() {
@@ -441,7 +447,7 @@ public class JailManager {
         return jail != null && jail.isActive() && !jail.isExpired();
     }
 
-    public boolean isTeleportAllowed(Player player) {
+    public boolean isTeleportAllowed(@NotNull Player player) {
         return teleportAllowed.contains(player.getUniqueId());
     }
 
@@ -469,7 +475,7 @@ public class JailManager {
         return sendToJail(player, durationMillis, previousLocation, issuerName, reason);
     }
 
-    private void clearAllEffects(Player player) {
+    private void clearAllEffects(@NotNull Player player) {
         for (PotionEffect effect : player.getActivePotionEffects()) {
             player.removePotionEffect(effect.getType());
         }

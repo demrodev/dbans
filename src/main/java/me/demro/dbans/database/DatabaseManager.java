@@ -16,7 +16,6 @@ public interface DatabaseManager {
 
     void setCacheManager(CacheManager cacheManager);
 
-    // ===== ОСНОВНЫЕ МЕТОДЫ ДЛЯ НАКАЗАНИЙ =====
     void savePunishment(Punishment punishment);
 
     void updatePunishment(Punishment punishment);
@@ -45,7 +44,6 @@ public interface DatabaseManager {
 
     void pardonPunishment(String id, String pardonedBy, String pardonReason);
 
-    // ===== IP-БАНЫ =====
     void saveIpBan(String ip, UUID playerUuid, String playerName, String issuerName, String reason, long startTime,
                    Long endTime
     );
@@ -60,7 +58,6 @@ public interface DatabaseManager {
 
     List<String> getAllIpBans();
 
-    // ===== ИГРОКИ =====
     void savePlayer(PlayerInfo player);
 
     PlayerInfo getPlayer(UUID uuid);
@@ -71,7 +68,6 @@ public interface DatabaseManager {
 
     List<PlayerInfo> getAllPlayers();
 
-    // ===== JAIL =====
     void saveJail(JailPunishment jail);
 
     JailPunishment getActiveJail(UUID playerUuid);
@@ -98,7 +94,6 @@ public interface DatabaseManager {
 
     List<JailPunishment> getAllJailsForAllPlayers(); // для очистки платформ
 
-    // ===== WARNINGS =====
     void saveWarning(Warning warning);
 
     Warning getActiveWarning(UUID playerUuid);
@@ -121,14 +116,12 @@ public interface DatabaseManager {
 
     boolean isWarned(UUID playerUuid);
 
-    // ===== УДАЛЕНИЕ ВСЕГО =====
     void deleteAllPunishments();
 
     void deleteAllJails();
 
     void deleteAllWarnings();
 
-    // ===== СТАТИСТИКА ДЛЯ PLACEHOLDERAPI =====
     int getTotalPunishmentsCount();
 
     int getPunishmentsCountByType(String type);
@@ -141,19 +134,16 @@ public interface DatabaseManager {
 
     int getPunishmentsIssuedByPlayerAndType(String issuerName, String type);
 
-    // ===== ДОПОЛНИТЕЛЬНЫЕ МЕТОДЫ =====
     List<Punishment> getAllActivePunishmentsByType(PunishmentType type);
 
-    // ===== МЕТОДЫ ДЛЯ УВЕДОМЛЕНИЙ (ЧЕРЕЗ БД) =====
     void addNotification(UUID playerUuid, String messageKey, Map<String, String> placeholders);
 
-    List<Map<String, String>> getAndClearNotifications(UUID playerUuid); // <-- ЭТОТ МЕТОД БЫЛ ОТСУТСТВОВАЛ
+    List<Map<String, String>> getAndClearNotifications(UUID playerUuid);
 
     void clearNotifications(UUID playerUuid);
 
-    long getLastSeen(UUID uuid); // <-- ЭТОТ МЕТОД БЫЛ ОТСУТСТВОВАЛ
+    long getLastSeen(UUID uuid);
 
-    // ===== МЕТОДЫ ДЛЯ ОПТИМИЗАЦИИ =====
     String getPlayerIpByName(String playerName);
 
     List<String> getPlayerNamesByIp(String playerName);

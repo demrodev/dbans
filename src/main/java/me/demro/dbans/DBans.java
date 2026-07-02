@@ -30,6 +30,8 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.sql.SQLException;
@@ -61,10 +63,8 @@ public final class DBans extends JavaPlugin {
     private PlayerCache playerCache;
     private ProxySyncManager proxySyncManager;
 
-    // НОВОЕ API
     private DBansAPI api;
 
-    // ===== МЕТОДЫ УВЕДОМЛЕНИЙ =====
     public void addNotification(UUID playerUuid, String messageKey, Map<String, String> placeholders) {
         database.addNotification(playerUuid, messageKey, placeholders);
     }
@@ -131,8 +131,8 @@ public final class DBans extends JavaPlugin {
         altAccountManager = new AltAccountManager(this);
         warnManager = new WarnManager(this);
 
-        // ===== ИНИЦИАЛИЗАЦИЯ НОВОГО API =====
         this.api = new DBansAPIImpl(this);
+        //noinspection UnstableApiUsage
         DBansServiceRegistrar.register(this, api);
         log.info("New dBans API registered and ready.");
 
@@ -140,7 +140,6 @@ public final class DBans extends JavaPlugin {
             punishmentSyncManager = new PunishmentSyncManager(this);
         }
 
-        // Прокси-синхронизация
         if (mode.equalsIgnoreCase("sync") || mode.equalsIgnoreCase("sync_static")) {
             proxySyncManager = new ProxySyncManager(this);
             getServer().getMessenger().registerOutgoingPluginChannel(this, Constants.CHANNEL_NAME);
@@ -150,10 +149,8 @@ public final class DBans extends JavaPlugin {
             log.info("ℹ️ Proxy sync disabled (mode={})", mode);
         }
 
-        // Проверка и деактивация истекших мутов при загрузке
         checkAndDeactivateExpiredMutes();
 
-        // Регистрация команд
         getCommand("ban").setExecutor(new BanCommand(this));
         getCommand("tempban").setExecutor(new TempBanCommand(this));
         getCommand("unban").setExecutor(new UnbanCommand(this));
@@ -200,7 +197,6 @@ public final class DBans extends JavaPlugin {
             getCommand(cmd).setTabCompleter(universalTabCompleter);
         }
 
-        // Планирование активных мутов
         rescheduleAllMutes();
 
         log.info("DBans v{} by demrodev enabled", getPluginMeta().getVersion());
@@ -227,8 +223,8 @@ public final class DBans extends JavaPlugin {
             proxySyncManager = null;
         }
 
-        // Отмена регистрации API
         if (api != null) {
+            //noinspection UnstableApiUsage
             DBansServiceRegistrar.unregister(api);
             api = null;
         }
@@ -239,7 +235,6 @@ public final class DBans extends JavaPlugin {
         log.info("DBans disabled");
     }
 
-    // ===== МЕТОД ДЛЯ ДЕАКТИВАЦИИ ИСТЕКШИХ МУТОВ =====
     private void checkAndDeactivateExpiredMutes() {
         List<Punishment> activeMutes = database.getAllActivePunishmentsByType(PunishmentType.MUTE);
         long now = System.currentTimeMillis();
@@ -284,8 +279,7 @@ public final class DBans extends JavaPlugin {
         }
     }
 
-    // ===== МЕТОДЫ ДЛЯ РАБОТЫ С МУТАМИ =====
-    public void scheduleMuteExpiry(Punishment mute) {
+    public void scheduleMuteExpiry(@NotNull Punishment mute) {
         if (mute.getEndTime() == null) return;
         long delay = mute.getEndTime() - System.currentTimeMillis();
         if (delay <= 0) {
@@ -359,21 +353,16 @@ public final class DBans extends JavaPlugin {
         }
     }
 
-    // ===== ГЕТТЕРЫ =====
+    @Contract(" -> !null")
     public String getServerName() {
         return getConfig().getString("server_name", "unknown");
     }
 
+    @Contract(" -> !null")
     public String getMode() {
         return getConfig().getString("mode", "single");
     }
 
-    // Новый геттер API
-    public DBansAPI getApi() {
-        return api;
-    }
-
-    // ===== ПЕРЕЗАГРУЗКА КОНФИГУРАЦИИ JAIL =====
     public void reloadJailConfig() {
         if (jailConfigFile == null) {
             jailConfigFile = new File(getDataFolder(), "jail.yml");

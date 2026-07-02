@@ -19,7 +19,7 @@ public class PlayerCache {
     private final Map<UUID, String> uuidToName = new ConcurrentHashMap<>();
 
     /**
-     * Получить OfflinePlayer по имени. Сначала проверяет кэш, если нет – запрашивает у Bukkit и кэширует.
+     * Получить OfflinePlayer по имени. Сначала проверяет кэш, если нет - запрашивает у Bukkit и кэширует.
      */
     public OfflinePlayer getOfflinePlayer(String name) {
         UUID uuid = nameToUuid.get(name);

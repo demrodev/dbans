@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -32,7 +33,7 @@ public class Punishment {
     private String pardonReason;
     private String serverName;
 
-    public static String generateId() {
+    public static @NotNull String generateId() {
         StringBuilder sb = new StringBuilder(ID_LENGTH);
         for (int i = 0; i < ID_LENGTH; i++) {
             int index = ThreadLocalRandom.current().nextInt(CHARACTERS.length());

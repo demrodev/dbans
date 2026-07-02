@@ -2,6 +2,7 @@ package me.demro.dbans.util;
 
 import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
@@ -26,23 +27,13 @@ public class TimeUtil {
         while (m.find()) {
             long num = Long.parseLong(m.group(1));
             char unit = m.group(2).charAt(0);
-            long millis;
-            switch (unit) {
-                case 's':
-                    millis = TimeUnit.SECONDS.toMillis(num);
-                    break;
-                case 'm':
-                    millis = TimeUnit.MINUTES.toMillis(num);
-                    break;
-                case 'h':
-                    millis = TimeUnit.HOURS.toMillis(num);
-                    break;
-                case 'd':
-                    millis = TimeUnit.DAYS.toMillis(num);
-                    break;
-                default:
-                    throw new IllegalArgumentException("Invalid time unit: " + unit);
-            }
+            long millis = switch (unit) {
+                case 's' -> TimeUnit.SECONDS.toMillis(num);
+                case 'm' -> TimeUnit.MINUTES.toMillis(num);
+                case 'h' -> TimeUnit.HOURS.toMillis(num);
+                case 'd' -> TimeUnit.DAYS.toMillis(num);
+                default -> throw new IllegalArgumentException("Invalid time unit: " + unit);
+            };
             total += millis;
             lastEnd = m.end();
         }
@@ -55,7 +46,7 @@ public class TimeUtil {
         return TIME_PATTERN.matcher(input).matches();
     }
 
-    public static String formatDuration(long millis) {
+    public static @NotNull String formatDuration(long millis) {
         if (millis <= 0) return "0" + getUnitForm(0, "second");
         if (formattedCache.size() < CACHE_MAX_SIZE) {
             String cached = formattedCache.get(millis);
@@ -71,7 +62,7 @@ public class TimeUtil {
         if (days > 0) sb.append(days).append(" ").append(getUnitForm(days, "day")).append(" ");
         if (hours > 0) sb.append(hours).append(" ").append(getUnitForm(hours, "hour")).append(" ");
         if (minutes > 0) sb.append(minutes).append(" ").append(getUnitForm(minutes, "minute")).append(" ");
-        if (seconds > 0 && sb.length() == 0) sb.append(seconds).append(" ").append(getUnitForm(seconds, "second"));
+        if (seconds > 0 && sb.isEmpty()) sb.append(seconds).append(" ").append(getUnitForm(seconds, "second"));
 
         String result = sb.toString().trim();
         if (formattedCache.size() < CACHE_MAX_SIZE) {
@@ -89,15 +80,10 @@ public class TimeUtil {
         if (lastTwo >= 11 && lastTwo <= 14) {
             return plugin.getConfig().getString(path + "many", unitKey);
         }
-        switch (lastDigit) {
-            case 1:
-                return plugin.getConfig().getString(path + "one", unitKey);
-            case 2:
-            case 3:
-            case 4:
-                return plugin.getConfig().getString(path + "few", unitKey);
-            default:
-                return plugin.getConfig().getString(path + "many", unitKey);
-        }
+        return switch (lastDigit) {
+            case 1 -> plugin.getConfig().getString(path + "one", unitKey);
+            case 2, 3, 4 -> plugin.getConfig().getString(path + "few", unitKey);
+            default -> plugin.getConfig().getString(path + "many", unitKey);
+        };
     }
 }

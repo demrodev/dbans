@@ -8,6 +8,7 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -40,7 +41,7 @@ public class PunishmentSyncManager {
         }.runTaskTimerAsynchronously(plugin, 0L, interval * 20L);
     }
 
-    private void checkBan(Player player) {
+    private void checkBan(@NotNull Player player) {
         UUID uuid = player.getUniqueId();
         Punishment ban = plugin.getDatabase().getActivePunishment(uuid, PunishmentType.BAN,
                                                                   plugin.getServerName(), plugin.getMode());
@@ -55,7 +56,7 @@ public class PunishmentSyncManager {
         }
     }
 
-    private void kickForBan(Player player, Punishment ban) {
+    private void kickForBan(@NotNull Player player, Punishment ban) {
         if (!player.isOnline()) return;
         if (plugin.getMode().equalsIgnoreCase("sync_static") &&
             !ban.getServerName().equals(plugin.getServerName())) {
@@ -81,7 +82,7 @@ public class PunishmentSyncManager {
         player.kick(kickComponent);
     }
 
-    private void checkMuteForChat(Player player) {
+    private void checkMuteForChat(@NotNull Player player) {
         UUID uuid = player.getUniqueId();
         Punishment mute = plugin.getDatabase().getActivePunishment(uuid, PunishmentType.MUTE,
                                                                    plugin.getServerName(), plugin.getMode());
@@ -96,7 +97,7 @@ public class PunishmentSyncManager {
         }
     }
 
-    private void checkGlobalMuteForNotification(Player player) {
+    private void checkGlobalMuteForNotification(@NotNull Player player) {
         UUID uuid = player.getUniqueId();
         Punishment globalMute = getGlobalActiveMute(uuid);
         boolean hasGlobalMute = (globalMute != null && !globalMute.isExpired());
@@ -115,7 +116,7 @@ public class PunishmentSyncManager {
         return plugin.getDatabase().getActivePunishment(uuid, PunishmentType.MUTE, null, "sync");
     }
 
-    private void notifyMute(Player player, Punishment mute) {
+    private void notifyMute(@NotNull Player player, Punishment mute) {
         if (!player.isOnline()) return;
         boolean isTemp = mute.getEndTime() != null;
         String key = isTemp ? "tempmute_player" : "mute_player";

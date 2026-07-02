@@ -6,6 +6,7 @@ import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
 import net.luckperms.api.model.user.User;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
 import java.util.UUID;
@@ -24,7 +25,7 @@ public class LuckPermsHook {
         log.debug("LuckPermsHook initialized");
     }
 
-    public String getPrimaryGroup(Player player) {
+    public String getPrimaryGroup(@NotNull Player player) {
         return getPrimaryGroup(player.getUniqueId());
     }
 

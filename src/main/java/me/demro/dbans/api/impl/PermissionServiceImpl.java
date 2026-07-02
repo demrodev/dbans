@@ -6,6 +6,7 @@ import me.demro.dlibs.dbans.api.punishment.PunishmentType;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
@@ -15,6 +16,7 @@ public class PermissionServiceImpl implements PermissionService {
 
     private final DBans plugin;
 
+    @Contract(pure = true)
     public PermissionServiceImpl(DBans plugin) {
         this.plugin = plugin;
     }

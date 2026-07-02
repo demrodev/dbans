@@ -7,6 +7,8 @@ import me.demro.dbans.model.*;
 import me.demro.dbans.util.CacheManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 
 import java.sql.*;
 import java.util.*;
@@ -25,6 +27,7 @@ public class H2Database implements DatabaseManager {
     private HikariDataSource dataSource;
     private CacheManager cache;
 
+    @Contract(pure = true)
     public H2Database(DBans plugin) {
         this.plugin = plugin;
     }
@@ -120,8 +123,6 @@ public class H2Database implements DatabaseManager {
         if (dataSource != null && !dataSource.isClosed()) dataSource.close();
     }
 
-    // ===== ОСНОВНЫЕ МЕТОДЫ ДЛЯ НАКАЗАНИЙ =====
-
     @Override
     public void savePunishment(Punishment punishment) {
         String sql = "INSERT INTO punishments (id, player_uuid, player_name, issuer_uuid, issuer_name, type, reason, start_time, end_time, active, server_name) VALUES (?,?,?,?,?,?,?,?,?,?,?)";
@@ -164,7 +165,7 @@ public class H2Database implements DatabaseManager {
     }
 
     @Override
-    public void updatePunishment(Punishment punishment) {
+    public void updatePunishment(@NotNull Punishment punishment) {
         String sql = "UPDATE punishments SET active=?, pardoned_by=?, pardoned_at=?, pardon_reason=? WHERE id=?";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -386,7 +387,7 @@ public class H2Database implements DatabaseManager {
     }
 
     @Override
-    public List<Punishment> getPunishmentHistoryIncludingJail(UUID playerUuid) {
+    public List<Punishment> getPunishmentHistoryIncludingJail(@NotNull UUID playerUuid) {
         List<Punishment> list = new ArrayList<>();
         String sql = "SELECT id, player_uuid, player_name, issuer_uuid, issuer_name, type, reason, start_time, end_time, active, server_name, pardoned_by, pardoned_at, pardon_reason FROM punishments WHERE player_uuid = ? " +
                      "UNION ALL " +
@@ -472,8 +473,6 @@ public class H2Database implements DatabaseManager {
         updatePunishment(p);
     }
 
-    // ===== IP-БАНЫ =====
-
     @Override
     public void saveIpBan(String ip, UUID playerUuid, String playerName, String issuerName, String reason,
                           long startTime, Long endTime
@@ -511,7 +510,7 @@ public class H2Database implements DatabaseManager {
         return false;
     }
 
-    private boolean matchesMask(String ip, String mask) {
+    private boolean matchesMask(@NotNull String ip, @NotNull String mask) {
         String[] maskParts = mask.split("\\.");
         String[] ipParts = ip.split("\\.");
         for (int i = 0; i < 4; i++) {
@@ -537,7 +536,7 @@ public class H2Database implements DatabaseManager {
     }
 
     @Override
-    public void removeIpBanByPlayer(UUID playerUuid) {
+    public void removeIpBanByPlayer(@NotNull UUID playerUuid) {
         String sql = "DELETE FROM ip_bans WHERE player_uuid=?";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -581,10 +580,8 @@ public class H2Database implements DatabaseManager {
         return list;
     }
 
-    // ===== ИГРОКИ =====
-
     @Override
-    public void savePlayer(PlayerInfo player) {
+    public void savePlayer(@NotNull PlayerInfo player) {
         String sql = "MERGE INTO players (uuid, name, ip, last_seen) KEY(uuid) VALUES (?,?,?,?)";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -600,7 +597,7 @@ public class H2Database implements DatabaseManager {
     }
 
     @Override
-    public PlayerInfo getPlayer(UUID uuid) {
+    public PlayerInfo getPlayer(@NotNull UUID uuid) {
         String sql = "SELECT * FROM players WHERE uuid=?";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -671,10 +668,8 @@ public class H2Database implements DatabaseManager {
         return list;
     }
 
-    // ===== JAIL =====
-
     @Override
-    public void saveJail(JailPunishment jail) {
+    public void saveJail(@NotNull JailPunishment jail) {
         String sql = "INSERT INTO jail_punishments (id, player_uuid, player_name, issuer_uuid, issuer_name, reason, start_time, end_time, active, server_name, previous_location, jail_location, pending_unjail) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -710,7 +705,7 @@ public class H2Database implements DatabaseManager {
     }
 
     @Override
-    public JailPunishment getActiveJail(UUID playerUuid) {
+    public JailPunishment getActiveJail(@NotNull UUID playerUuid) {
         String sql = "SELECT * FROM jail_punishments WHERE player_uuid=? AND active=TRUE ORDER BY start_time DESC LIMIT 1";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -738,7 +733,7 @@ public class H2Database implements DatabaseManager {
     }
 
     @Override
-    public void updateJail(JailPunishment jail) {
+    public void updateJail(@NotNull JailPunishment jail) {
         String sql = "UPDATE jail_punishments SET active=?, pardoned_by=?, pardoned_at=?, pending_unjail=? WHERE id=?";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -777,7 +772,7 @@ public class H2Database implements DatabaseManager {
     }
 
     @Override
-    public List<JailPunishment> getAllJailsForPlayer(UUID playerUuid) {
+    public List<JailPunishment> getAllJailsForPlayer(@NotNull UUID playerUuid) {
         List<JailPunishment> list = new ArrayList<>();
         String sql = "SELECT * FROM jail_punishments WHERE player_uuid=? ORDER BY start_time DESC";
         try (Connection conn = dataSource.getConnection();
@@ -809,7 +804,7 @@ public class H2Database implements DatabaseManager {
     }
 
     @Override
-    public void setPendingUnjail(UUID playerId, boolean pending) {
+    public void setPendingUnjail(@NotNull UUID playerId, boolean pending) {
         String sql = "UPDATE jail_punishments SET pending_unjail = ? WHERE player_uuid = ? AND active = TRUE";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -822,7 +817,7 @@ public class H2Database implements DatabaseManager {
     }
 
     @Override
-    public boolean hasPendingUnjail(UUID playerId) {
+    public boolean hasPendingUnjail(@NotNull UUID playerId) {
         String sql = "SELECT pending_unjail FROM jail_punishments WHERE player_uuid = ? AND active = TRUE";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -868,10 +863,8 @@ public class H2Database implements DatabaseManager {
         return list;
     }
 
-    // ===== WARNINGS =====
-
     @Override
-    public void saveWarning(Warning warning) {
+    public void saveWarning(@NotNull Warning warning) {
         String sql = "INSERT INTO warnings (id, player_uuid, player_name, issuer_uuid, issuer_name, reason, start_time, end_time, active, server_name) VALUES (?,?,?,?,?,?,?,?,?,?)";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -894,7 +887,7 @@ public class H2Database implements DatabaseManager {
     }
 
     @Override
-    public Warning getActiveWarning(UUID playerUuid) {
+    public Warning getActiveWarning(@NotNull UUID playerUuid) {
         String sql = "SELECT * FROM warnings WHERE player_uuid=? AND active=TRUE ORDER BY start_time DESC LIMIT 1";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -924,7 +917,7 @@ public class H2Database implements DatabaseManager {
     }
 
     @Override
-    public List<Warning> getActiveWarnings(UUID playerUuid) {
+    public List<Warning> getActiveWarnings(@NotNull UUID playerUuid) {
         List<Warning> list = new ArrayList<>();
         String sql = "SELECT * FROM warnings WHERE player_uuid=? AND active=TRUE ORDER BY start_time DESC";
         try (Connection conn = dataSource.getConnection();
@@ -940,7 +933,7 @@ public class H2Database implements DatabaseManager {
     }
 
     @Override
-    public List<Warning> getAllWarningsForPlayer(UUID playerUuid) {
+    public List<Warning> getAllWarningsForPlayer(@NotNull UUID playerUuid) {
         List<Warning> list = new ArrayList<>();
         String sql = "SELECT * FROM warnings WHERE player_uuid=? ORDER BY start_time DESC";
         try (Connection conn = dataSource.getConnection();
@@ -971,7 +964,7 @@ public class H2Database implements DatabaseManager {
     }
 
     @Override
-    public void updateWarning(Warning warning) {
+    public void updateWarning(@NotNull Warning warning) {
         String sql = "UPDATE warnings SET active=?, pardoned_by=?, pardoned_at=? WHERE id=?";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -1021,8 +1014,6 @@ public class H2Database implements DatabaseManager {
         return !getActiveWarnings(playerUuid).isEmpty();
     }
 
-    // ===== УДАЛЕНИЕ ВСЕГО =====
-
     @Override
     public void deleteAllPunishments() {
         String sql = "DELETE FROM punishments";
@@ -1056,8 +1047,6 @@ public class H2Database implements DatabaseManager {
         }
     }
 
-    // ===== СТАТИСТИКА ДЛЯ PLACEHOLDERAPI =====
-
     @Override
     public int getTotalPunishmentsCount() {
         String sql = "SELECT COUNT(*) FROM (SELECT 1 FROM punishments UNION ALL SELECT 1 FROM jail_punishments UNION ALL SELECT 1 FROM warnings)";
@@ -1072,7 +1061,7 @@ public class H2Database implements DatabaseManager {
     }
 
     @Override
-    public int getPunishmentsCountByType(String type) {
+    public int getPunishmentsCountByType(@NotNull String type) {
         String sql;
         if (type.equals("JAIL")) {
             sql = "SELECT COUNT(*) FROM jail_punishments";
@@ -1095,7 +1084,7 @@ public class H2Database implements DatabaseManager {
     }
 
     @Override
-    public int getPunishmentsCountByTypeAndPlayer(String type, String playerName) {
+    public int getPunishmentsCountByTypeAndPlayer(@NotNull String type, String playerName) {
         String sql;
         if (type.equals("JAIL")) {
             sql = "SELECT COUNT(*) FROM jail_punishments WHERE player_name = ?";
@@ -1153,7 +1142,7 @@ public class H2Database implements DatabaseManager {
     }
 
     @Override
-    public int getPunishmentsIssuedByPlayerAndType(String issuerName, String type) {
+    public int getPunishmentsIssuedByPlayerAndType(String issuerName, @NotNull String type) {
         String sql;
         if (type.equals("JAIL")) {
             sql = "SELECT COUNT(*) FROM jail_punishments WHERE issuer_name = ?";
@@ -1178,10 +1167,8 @@ public class H2Database implements DatabaseManager {
         return 0;
     }
 
-    // ===== ДОПОЛНИТЕЛЬНЫЕ МЕТОДЫ =====
-
     @Override
-    public List<Punishment> getAllActivePunishmentsByType(PunishmentType type) {
+    public List<Punishment> getAllActivePunishmentsByType(@NotNull PunishmentType type) {
         List<Punishment> list = new ArrayList<>();
         String sql = "SELECT * FROM punishments WHERE type=? AND active=TRUE";
         try (Connection conn = dataSource.getConnection();
@@ -1196,10 +1183,8 @@ public class H2Database implements DatabaseManager {
         return list;
     }
 
-    // ===== МЕТОДЫ ДЛЯ УВЕДОМЛЕНИЙ =====
-
     @Override
-    public void addNotification(UUID playerUuid, String messageKey, Map<String, String> placeholders) {
+    public void addNotification(@NotNull UUID playerUuid, String messageKey, Map<String, String> placeholders) {
         String sql = "INSERT INTO player_notifications (uuid, message_key, placeholders, created) VALUES (?, ?, ?, ?)";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -1222,7 +1207,7 @@ public class H2Database implements DatabaseManager {
     }
 
     @Override
-    public List<Map<String, String>> getAndClearNotifications(UUID playerUuid) {
+    public List<Map<String, String>> getAndClearNotifications(@NotNull UUID playerUuid) {
         List<Map<String, String>> result = new ArrayList<>();
         String select = "SELECT message_key, placeholders FROM player_notifications WHERE uuid = ? ORDER BY created ASC";
         try (Connection conn = dataSource.getConnection();
@@ -1257,7 +1242,7 @@ public class H2Database implements DatabaseManager {
     }
 
     @Override
-    public void clearNotifications(UUID playerUuid) {
+    public void clearNotifications(@NotNull UUID playerUuid) {
         String sql = "DELETE FROM player_notifications WHERE uuid = ?";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -1269,7 +1254,7 @@ public class H2Database implements DatabaseManager {
     }
 
     @Override
-    public long getLastSeen(UUID uuid) {
+    public long getLastSeen(@NotNull UUID uuid) {
         String sql = "SELECT last_seen FROM players WHERE uuid = ?";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -1283,8 +1268,6 @@ public class H2Database implements DatabaseManager {
         }
         return 0;
     }
-
-    // ===== МЕТОДЫ ДЛЯ ОПТИМИЗАЦИИ =====
 
     @Override
     public String getPlayerIpByName(String playerName) {
@@ -1321,7 +1304,8 @@ public class H2Database implements DatabaseManager {
     }
 
     @Override
-    public Map<UUID, List<Punishment>> getActivePunishmentsForPlayers(Set<UUID> playerUuids, String currentServer,
+    public Map<UUID, List<Punishment>> getActivePunishmentsForPlayers(@NotNull Set<UUID> playerUuids,
+                                                                      String currentServer,
                                                                       String mode
     ) {
         Map<UUID, List<Punishment>> result = new HashMap<>();
@@ -1354,9 +1338,7 @@ public class H2Database implements DatabaseManager {
         return result;
     }
 
-    // ===== MAP ПРИВАТНЫХ МЕТОДОВ =====
-
-    private Punishment mapResultSet(ResultSet rs) throws SQLException {
+    private @NotNull Punishment mapResultSet(@NotNull ResultSet rs) throws SQLException {
         Punishment p = new Punishment();
         p.setId(rs.getString("id"));
         p.setPlayerUuid(UUID.fromString(rs.getString("player_uuid")));
@@ -1377,7 +1359,7 @@ public class H2Database implements DatabaseManager {
         return p;
     }
 
-    private Punishment mapJailAsPunishment(ResultSet rs) throws SQLException {
+    private @NotNull Punishment mapJailAsPunishment(@NotNull ResultSet rs) throws SQLException {
         Punishment p = new Punishment();
         p.setId(rs.getString("id"));
         p.setPlayerUuid(UUID.fromString(rs.getString("player_uuid")));
@@ -1397,7 +1379,7 @@ public class H2Database implements DatabaseManager {
         return p;
     }
 
-    private Punishment mapPunishmentWithType(ResultSet rs) throws SQLException {
+    private @NotNull Punishment mapPunishmentWithType(@NotNull ResultSet rs) throws SQLException {
         Punishment p = new Punishment();
         p.setId(rs.getString("id"));
         p.setPlayerUuid(UUID.fromString(rs.getString("player_uuid")));
@@ -1418,7 +1400,7 @@ public class H2Database implements DatabaseManager {
         return p;
     }
 
-    private Punishment mapWarningAsPunishment(ResultSet rs) throws SQLException {
+    private @NotNull Punishment mapWarningAsPunishment(@NotNull ResultSet rs) throws SQLException {
         Punishment p = new Punishment();
         p.setId(rs.getString("id"));
         p.setPlayerUuid(UUID.fromString(rs.getString("player_uuid")));
@@ -1438,7 +1420,7 @@ public class H2Database implements DatabaseManager {
         return p;
     }
 
-    private JailPunishment mapJailResultSet(ResultSet rs) throws SQLException {
+    private @NotNull JailPunishment mapJailResultSet(@NotNull ResultSet rs) throws SQLException {
         JailPunishment j = new JailPunishment();
         j.setId(rs.getString("id"));
         j.setPlayerUuid(UUID.fromString(rs.getString("player_uuid")));
@@ -1493,7 +1475,7 @@ public class H2Database implements DatabaseManager {
         return j;
     }
 
-    private Warning mapWarningResultSet(ResultSet rs) throws SQLException {
+    private @NotNull Warning mapWarningResultSet(@NotNull ResultSet rs) throws SQLException {
         Warning w = new Warning();
         w.setId(rs.getString("id"));
         w.setPlayerUuid(UUID.fromString(rs.getString("player_uuid")));

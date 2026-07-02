@@ -6,6 +6,7 @@ import me.demro.dbans.util.MessageUtil;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.jetbrains.annotations.NotNull;
 
 @Slf4j
 public class DbanCommand implements CommandExecutor {
@@ -17,7 +18,9 @@ public class DbanCommand implements CommandExecutor {
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command cmd, @NotNull String label,
+                             String[] args
+    ) {
         if (args.length != 1 || !args[0].equalsIgnoreCase("reload")) {
             MessageUtil.send(sender, "usage_dban");
             return true;

@@ -7,6 +7,7 @@ import me.demro.dbans.model.PunishmentType;
 import me.demro.dbans.model.Warning;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.UUID;
@@ -25,7 +26,7 @@ public class WarnManager {
         this.plugin = plugin;
     }
 
-    public void checkAndApplyThresholds(Player player) {
+    public void checkAndApplyThresholds(@NotNull Player player) {
         int count = getActiveWarningCount(player.getUniqueId());
         String action = plugin.getConfig().getString("warn_thresholds." + count);
         if (action == null) return;
@@ -63,7 +64,9 @@ public class WarnManager {
         }
     }
 
-    public void applyPunishment(Player target, String punishmentType, long duration, String reason, String issuerName) {
+    public void applyPunishment(Player target, @NotNull String punishmentType, long duration, String reason,
+                                String issuerName
+    ) {
         UUID issuerUuid = UUID.nameUUIDFromBytes("CONSOLE".getBytes());
         String serverName = plugin.getServerName();
         long startTime = System.currentTimeMillis();
