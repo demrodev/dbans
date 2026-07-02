@@ -29,8 +29,8 @@ public class UnjailCommand extends BaseUnpunishCommand {
     }
 
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull @NotNull Command cmd,
-                             @NotNull @NotNull String label, String[] args
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command cmd,
+                             @NotNull String label, String[] args
     ) {
         if (!plugin.getConfig().getBoolean("jail.enabled", true)) {
             MessageUtil.send(sender, "jail_disabled");
