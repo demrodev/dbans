@@ -125,7 +125,7 @@ public final class DBans extends JavaPlugin {
         jailManager = new JailManager(this);
         luckPermsHook = new LuckPermsHook(this);
         presetManager = new PresetManager(this);
-        selfPunishChecker = new SelfPunishChecker(this);
+        selfPunishChecker = new SelfPunishChecker();
         geoIpManager = new GeoIpManager(this);
         limitsManager = new LimitsManager(this);
         altAccountManager = new AltAccountManager(this);
@@ -165,7 +165,7 @@ public final class DBans extends JavaPlugin {
         getCommand("inspect").setExecutor(new InspectCommand(this));
         getCommand("altreason").setExecutor(new AltReasonCommand(this));
         getCommand("altduration").setExecutor(new AltDurationCommand(this));
-        getCommand("getuuid").setExecutor(new GetUuidCommand(this));
+        getCommand("getuuid").setExecutor(new GetUuidCommand());
         getCommand("playerinfo").setExecutor(new PlayerInfoCommand(this));
         getCommand("pstat").setExecutor(new PStatCommand(this));
         getCommand("punlist").setExecutor(new PunListCommand(this));
