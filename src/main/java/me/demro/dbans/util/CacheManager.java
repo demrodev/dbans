@@ -11,15 +11,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 public class CacheManager {
+
     private final DBans plugin;
     private final Map<String, Punishment> activePunishmentCache = new ConcurrentHashMap<>();
     private final Map<UUID, Punishment> muteCache = new ConcurrentHashMap<>(); // НОВЫЙ КЭШ ДЛЯ МУТА
+    private final long ipBansTtlMillis = TimeUnit.SECONDS.toMillis(60);
+    private final Map<String, Long> cacheTimestamps = new ConcurrentHashMap<>();
     private volatile boolean ipBansCacheValid = false;
     private volatile List<String> cachedIpBans = null;
     private long lastIpBansRefresh = 0;
-    private final long ipBansTtlMillis = TimeUnit.SECONDS.toMillis(60);
-    private long punishmentTtlMillis;
-    private final Map<String, Long> cacheTimestamps = new ConcurrentHashMap<>();
+    private final long punishmentTtlMillis;
 
     public CacheManager(DBans plugin) {
         this.plugin = plugin;
@@ -43,7 +44,9 @@ public class CacheManager {
         return null;
     }
 
-    public void cacheActivePunishment(UUID uuid, PunishmentType type, String serverName, String mode, Punishment punishment) {
+    public void cacheActivePunishment(UUID uuid, PunishmentType type, String serverName, String mode,
+                                      Punishment punishment
+    ) {
         String key = buildKey(uuid, type, serverName, mode);
         activePunishmentCache.put(key, punishment);
         cacheTimestamps.put(key, System.currentTimeMillis());

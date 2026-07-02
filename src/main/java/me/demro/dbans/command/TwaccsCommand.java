@@ -12,6 +12,7 @@ import java.util.List;
 
 @Slf4j
 public class TwaccsCommand implements CommandExecutor {
+
     private final DBans plugin;
 
     public TwaccsCommand(DBans plugin) {

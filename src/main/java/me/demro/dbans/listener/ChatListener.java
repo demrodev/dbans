@@ -1,5 +1,6 @@
 package me.demro.dbans.listener;
 
+import io.papermc.paper.event.player.AsyncChatEvent;
 import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import me.demro.dbans.util.MessageUtil;
@@ -11,7 +12,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
-import io.papermc.paper.event.player.AsyncChatEvent;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -44,10 +44,10 @@ public class ChatListener implements Listener {
         event.setCancelled(true);
         String duration = mute.isPermanent() ? "навсегда" : TimeUtil.formatDuration(mute.expiresAt().get().toEpochMilli() - System.currentTimeMillis());
         MessageUtil.send(player, "cannot_chat",
-                "duration", duration,
-                "reason", mute.reason().value(),
-                "sender", mute.issuer().name(),
-                "server", mute.serverName());
+                         "duration", duration,
+                         "reason", mute.reason().value(),
+                         "sender", mute.issuer().name(),
+                         "server", mute.serverName());
     }
 
     @EventHandler

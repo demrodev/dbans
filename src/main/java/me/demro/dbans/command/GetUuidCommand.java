@@ -11,6 +11,7 @@ import org.bukkit.command.CommandSender;
 
 @Slf4j
 public class GetUuidCommand implements CommandExecutor {
+
     private final DBans plugin;
 
     public GetUuidCommand(DBans plugin) {
@@ -34,8 +35,8 @@ public class GetUuidCommand implements CommandExecutor {
             return true;
         }
         MessageUtil.send(sender, "getuuid_result",
-                "target", target.getName(),
-                "uuid", target.getUniqueId().toString());
+                         "target", target.getName(),
+                         "uuid", target.getUniqueId().toString());
         return true;
     }
 }

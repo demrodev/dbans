@@ -2,11 +2,10 @@ package me.demro.dbans.command;
 
 import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
-import me.demro.dlibs.dbans.api.punishment.PunishmentId;
-import me.demro.dlibs.dbans.api.punishment.Punishment;
-import me.demro.dbans.model.PunishmentType;
 import me.demro.dbans.util.MessageUtil;
 import me.demro.dbans.util.TimeUtil;
+import me.demro.dlibs.dbans.api.punishment.Punishment;
+import me.demro.dlibs.dbans.api.punishment.PunishmentId;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -46,7 +45,7 @@ public class AltDurationCommand implements CommandExecutor {
 
         Punishment punishment = opt.get();
         if (punishment.type() == me.demro.dlibs.dbans.api.punishment.PunishmentType.BAN ||
-                punishment.type() == me.demro.dlibs.dbans.api.punishment.PunishmentType.MUTE) {
+            punishment.type() == me.demro.dlibs.dbans.api.punishment.PunishmentType.MUTE) {
             // Можно изменить длительность только для временных
             if (punishment.isPermanent()) {
                 MessageUtil.send(sender, "cannot_change_duration_permanent");

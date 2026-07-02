@@ -13,6 +13,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder(toBuilder = true)
 public class JailPunishment {
+
     @Builder.Default
     private String id = Punishment.generateId();
     private UUID playerUuid;

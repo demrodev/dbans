@@ -7,6 +7,7 @@ import org.bukkit.entity.Player;
 
 @Slf4j
 public class SelfPunishChecker {
+
     private final DBans plugin;
 
     public SelfPunishChecker(DBans plugin) {
@@ -14,8 +15,7 @@ public class SelfPunishChecker {
     }
 
     public boolean isSelfPunish(CommandSender sender, String targetName) {
-        if (!(sender instanceof Player)) return false;
-        Player player = (Player) sender;
+        if (!(sender instanceof Player player)) return false;
         if (player.getName().equalsIgnoreCase(targetName)) {
             MessageUtil.send(player, "cannot_punish_self");
             return true;

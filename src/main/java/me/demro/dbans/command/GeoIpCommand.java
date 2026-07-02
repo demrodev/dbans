@@ -14,6 +14,7 @@ import java.net.InetAddress;
 
 @Slf4j
 public class GeoIpCommand implements CommandExecutor {
+
     private final DBans plugin;
 
     public GeoIpCommand(DBans plugin) {

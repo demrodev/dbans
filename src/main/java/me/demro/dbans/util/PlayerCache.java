@@ -14,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 public class PlayerCache {
+
     private final Map<String, UUID> nameToUuid = new ConcurrentHashMap<>();
     private final Map<UUID, String> uuidToName = new ConcurrentHashMap<>();
 

@@ -20,15 +20,16 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 public class JailManager {
+
     private final DBans plugin;
     private final Map<UUID, BukkitTask> phraseTasks = new ConcurrentHashMap<>();
     private final Map<UUID, BukkitTask> lightningTasks = new ConcurrentHashMap<>();
     private final Map<UUID, Object> npcMap = new ConcurrentHashMap<>();
     private final Set<UUID> teleportAllowed = ConcurrentHashMap.newKeySet();
     private final Map<UUID, JailPunishment> activeJailCache = new ConcurrentHashMap<>();
-    private boolean citizensEnabled;
     private final boolean jailEnabled;
     private final int randomRange;
+    private final boolean citizensEnabled;
     private BukkitTask expiryChecker;
 
     public JailManager(DBans plugin) {
@@ -97,7 +98,8 @@ public class JailManager {
     }
 
     public String sendToJail(Player player, Long durationMillis, Location previousLocation,
-                             String issuerName, String reason) {
+                             String issuerName, String reason
+    ) {
         if (!jailEnabled) {
             MessageUtil.send(player, "jail_disabled");
             return null;
@@ -144,37 +146,37 @@ public class JailManager {
         long start = System.currentTimeMillis();
         Long end = (durationMillis == null || durationMillis <= 0) ? null : start + durationMillis;
         JailPunishment jail = JailPunishment.builder()
-                .id(id)
-                .playerUuid(player.getUniqueId())
-                .playerName(player.getName())
-                .issuerUuid(UUID.nameUUIDFromBytes("CONSOLE".getBytes()))
-                .issuerName(issuerName)
-                .reason(reason)
-                .startTime(start)
-                .endTime(end)
-                .active(true)
-                .serverName(plugin.getServerName())
-                .previousLocation(previousLocation)
-                .jailLocation(jailLoc)
-                .build();
+                                            .id(id)
+                                            .playerUuid(player.getUniqueId())
+                                            .playerName(player.getName())
+                                            .issuerUuid(UUID.nameUUIDFromBytes("CONSOLE".getBytes()))
+                                            .issuerName(issuerName)
+                                            .reason(reason)
+                                            .startTime(start)
+                                            .endTime(end)
+                                            .active(true)
+                                            .serverName(plugin.getServerName())
+                                            .previousLocation(previousLocation)
+                                            .jailLocation(jailLoc)
+                                            .build();
         plugin.getDatabase().saveJail(jail);
         if (plugin.getProxySyncManager() != null) {
             plugin.getProxySyncManager().sendPunishmentCreate(jail);
         }
         if (plugin.getProxySyncManager() != null) {
             Punishment p = Punishment.builder()
-                    .id(jail.getId())
-                    .playerUuid(jail.getPlayerUuid())
-                    .playerName(jail.getPlayerName())
-                    .issuerUuid(jail.getIssuerUuid())
-                    .issuerName(jail.getIssuerName())
-                    .type(PunishmentType.JAIL)
-                    .reason(jail.getReason())
-                    .startTime(jail.getStartTime())
-                    .endTime(jail.getEndTime())
-                    .active(jail.isActive())
-                    .serverName(jail.getServerName())
-                    .build();
+                                     .id(jail.getId())
+                                     .playerUuid(jail.getPlayerUuid())
+                                     .playerName(jail.getPlayerName())
+                                     .issuerUuid(jail.getIssuerUuid())
+                                     .issuerName(jail.getIssuerName())
+                                     .type(PunishmentType.JAIL)
+                                     .reason(jail.getReason())
+                                     .startTime(jail.getStartTime())
+                                     .endTime(jail.getEndTime())
+                                     .active(jail.isActive())
+                                     .serverName(jail.getServerName())
+                                     .build();
             plugin.getProxySyncManager().sendPunishmentCreate(p);
         }
         activeJailCache.put(player.getUniqueId(), jail);
@@ -462,7 +464,8 @@ public class JailManager {
     }
 
     public String teleportToJail(Player player, Long durationMillis, Location previousLocation,
-                                 String issuerName, String reason) {
+                                 String issuerName, String reason
+    ) {
         return sendToJail(player, durationMillis, previousLocation, issuerName, reason);
     }
 

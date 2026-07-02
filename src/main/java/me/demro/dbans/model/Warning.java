@@ -12,6 +12,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder(toBuilder = true)
 public class Warning {
+
     @Builder.Default
     private String id = Punishment.generateId();
     private UUID playerUuid;

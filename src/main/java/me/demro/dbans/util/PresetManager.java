@@ -1,6 +1,5 @@
 package me.demro.dbans.util;
 
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import org.bukkit.command.CommandSender;
@@ -13,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 public class PresetManager {
+
     private final DBans plugin;
     private final Map<String, PunishmentPreset> presets = new ConcurrentHashMap<>();
     private final Map<String, List<String>> presetNamesByType = new ConcurrentHashMap<>();
@@ -52,8 +52,8 @@ public class PresetManager {
         }
 
         for (PunishmentPreset preset : presets.values()) {
-            presetNamesByType.computeIfAbsent(preset.getType().toLowerCase(), k -> new ArrayList<>())
-                    .add("+" + preset.getName());
+            presetNamesByType.computeIfAbsent(preset.type().toLowerCase(), k -> new ArrayList<>())
+                             .add("+" + preset.name());
         }
 
         log.info("Loaded {} punishment presets", presets.size());
@@ -70,7 +70,7 @@ public class PresetManager {
     public List<PunishmentPreset> getPresetsByType(String type) {
         List<PunishmentPreset> result = new ArrayList<>();
         for (PunishmentPreset preset : presets.values()) {
-            if (preset.getType().equalsIgnoreCase(type)) {
+            if (preset.type().equalsIgnoreCase(type)) {
                 result.add(preset);
             }
         }
@@ -83,27 +83,12 @@ public class PresetManager {
 
     public boolean canUsePreset(CommandSender sender, PunishmentPreset preset) {
         if (sender.hasPermission("dbans.presets.bypass")) return true;
-        if (preset.getPermission() == null || preset.getPermission().isEmpty()) return true;
-        return sender.hasPermission(preset.getPermission());
+        if (preset.permission() == null || preset.permission().isEmpty()) return true;
+        return sender.hasPermission(preset.permission());
     }
 
-    @Data
-    public static class PunishmentPreset {
-        private final String name;
-        private final String reason;
-        private final Long duration;
-        private final String durationRaw;
-        private final String type;
-        private final String permission;
-
-        public PunishmentPreset(String name, String reason, Long duration, String durationRaw, String type, String permission) {
-            this.name = name;
-            this.reason = reason;
-            this.duration = duration;
-            this.durationRaw = durationRaw;
-            this.type = type;
-            this.permission = permission;
-        }
+    public record PunishmentPreset(String name, String reason, Long duration, String durationRaw, String type,
+                                   String permission) {
 
         public boolean isPermanent() {
             return duration == null;

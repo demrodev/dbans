@@ -3,9 +3,9 @@ package me.demro.dbans.api.impl;
 import me.demro.dbans.DBans;
 import me.demro.dlibs.dbans.api.permission.PermissionService;
 import me.demro.dlibs.dbans.api.punishment.PunishmentType;
+import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
-import org.bukkit.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;

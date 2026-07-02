@@ -3,12 +3,16 @@ package me.demro.dbans;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import me.demro.dbans.api.impl.DBansAPIImpl;
 import me.demro.dbans.api.adapter.NewPunishmentAdapter;
+import me.demro.dbans.api.impl.DBansAPIImpl;
 import me.demro.dbans.command.*;
 import me.demro.dbans.command.tabcomplete.UniversalTabCompleter;
-import me.demro.dbans.database.*;
-import me.demro.dbans.listener.*;
+import me.demro.dbans.database.DatabaseManager;
+import me.demro.dbans.database.H2Database;
+import me.demro.dbans.database.MySQLDatabase;
+import me.demro.dbans.listener.ChatListener;
+import me.demro.dbans.listener.JailListener;
+import me.demro.dbans.listener.LoginListener;
 import me.demro.dbans.model.Punishment;
 import me.demro.dbans.model.PunishmentType;
 import me.demro.dbans.placeholder.DBansExpansion;
@@ -40,13 +44,13 @@ import java.util.UUID;
 @Setter
 public final class DBans extends JavaPlugin {
 
+    private final Map<String, BukkitTask> muteExpiryTasks = new HashMap<>();
     private DatabaseManager database;
     private LuckPermsHook luckPermsHook;
     private PresetManager presetManager;
     private SelfPunishChecker selfPunishChecker;
     private GeoIpManager geoIpManager;
     private LimitsManager limitsManager;
-    private final Map<String, BukkitTask> muteExpiryTasks = new HashMap<>();
     private JailManager jailManager;
     private YamlConfiguration jailConfig;
     private AltAccountManager altAccountManager;
@@ -189,9 +193,10 @@ public final class DBans extends JavaPlugin {
 
         UniversalTabCompleter universalTabCompleter = new UniversalTabCompleter(this);
         for (String cmd : new String[]{"ban", "tempban", "mute", "tempmute", "kick", "unban", "unmute",
-                "banip", "unbanip", "history", "droppunish", "altreason", "altduration",
-                "getuuid", "playerinfo", "pstat", "inspect", "punlist", "presetlist", "dban", "geoip",
-                "jail", "unjail", "warn", "unwarn", "warnlist", "twaccs", "bantwaccs"}) {
+                                       "banip", "unbanip", "history", "droppunish", "altreason", "altduration",
+                                       "getuuid", "playerinfo", "pstat", "inspect", "punlist", "presetlist", "dban",
+                                       "geoip",
+                                       "jail", "unjail", "warn", "unwarn", "warnlist", "twaccs", "bantwaccs"}) {
             getCommand(cmd).setTabCompleter(universalTabCompleter);
         }
 

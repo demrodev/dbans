@@ -16,6 +16,7 @@ import java.util.UUID;
 
 @Slf4j
 public class BantwaccsCommand implements CommandExecutor {
+
     private final DBans plugin;
 
     public BantwaccsCommand(DBans plugin) {
@@ -49,17 +50,17 @@ public class BantwaccsCommand implements CommandExecutor {
         for (String alt : alts) {
             OfflinePlayer altPlayer = plugin.getPlayerCache().getOfflinePlayer(alt);
             Punishment ban = Punishment.builder()
-                    .playerUuid(altPlayer.getUniqueId())
-                    .playerName(alt)
-                    .issuerUuid(issuerUuid)
-                    .issuerName(sender.getName())
-                    .type(PunishmentType.BAN)
-                    .reason(reason)
-                    .startTime(System.currentTimeMillis())
-                    .endTime(null)
-                    .active(true)
-                    .serverName(plugin.getServerName())
-                    .build();
+                                       .playerUuid(altPlayer.getUniqueId())
+                                       .playerName(alt)
+                                       .issuerUuid(issuerUuid)
+                                       .issuerName(sender.getName())
+                                       .type(PunishmentType.BAN)
+                                       .reason(reason)
+                                       .startTime(System.currentTimeMillis())
+                                       .endTime(null)
+                                       .active(true)
+                                       .serverName(plugin.getServerName())
+                                       .build();
             plugin.getDatabase().savePunishment(ban);
             if (plugin.getProxySyncManager() != null) {
                 plugin.getProxySyncManager().sendPunishmentCreate(ban);
@@ -69,20 +70,21 @@ public class BantwaccsCommand implements CommandExecutor {
             Player online = altPlayer.getPlayer();
             if (online != null) {
                 String kickMsg = MessageUtil.getRawMessage("ban_player");
-                if (kickMsg == null) kickMsg = "&c✖ Вы были забанены навсегда.\nПричина: %reason%\nАдминистратор: %sender%\nСервер: %server%\nID: #%id%";
+                if (kickMsg == null)
+                    kickMsg = "&c✖ Вы были забанены навсегда.\nПричина: %reason%\nАдминистратор: %sender%\nСервер: %server%\nID: #%id%";
                 kickMsg = kickMsg.replace("%reason%", reason)
-                        .replace("%sender%", sender.getName())
-                        .replace("%server%", plugin.getServerName())
-                        .replace("%id%", ban.getId());
+                                 .replace("%sender%", sender.getName())
+                                 .replace("%server%", plugin.getServerName())
+                                 .replace("%id%", ban.getId());
                 online.kick(MessageUtil.deserializeForKick(kickMsg));
             }
         }
         String banned = bannedList.length() > 0 ? bannedList.substring(0, bannedList.length() - 2) : "";
         MessageUtil.broadcast("dbans.notify.ban", "bantwaccs_broadcast",
-                "sender", sender.getName(),
-                "target", target.getName(),
-                "alts", banned,
-                "reason", reason);
+                              "sender", sender.getName(),
+                              "target", target.getName(),
+                              "alts", banned,
+                              "reason", reason);
         return true;
     }
 }

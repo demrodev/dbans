@@ -3,7 +3,6 @@ package me.demro.dbans.command;
 import me.demro.dbans.DBans;
 import me.demro.dbans.model.Warning;
 import me.demro.dbans.util.MessageUtil;
-import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -15,8 +14,9 @@ import java.util.List;
 import java.util.UUID;
 
 public class WarnListCommand implements CommandExecutor {
+
     private final DBans plugin;
-    private SimpleDateFormat dateFormat;
+    private final SimpleDateFormat dateFormat;
 
     public WarnListCommand(DBans plugin) {
         this.plugin = plugin;
@@ -55,12 +55,12 @@ public class WarnListCommand implements CommandExecutor {
             else status = "Активно";
             String duration = w.getEndTime() == null ? "навсегда" : me.demro.dbans.util.TimeUtil.formatDuration(w.getEndTime() - w.getStartTime());
             MessageUtil.send(sender, "warnlist_entry",
-                    "id", w.getId(),
-                    "date", date,
-                    "issuer", w.getIssuerName(),
-                    "reason", w.getReason(),
-                    "duration", duration,
-                    "status", status);
+                             "id", w.getId(),
+                             "date", date,
+                             "issuer", w.getIssuerName(),
+                             "reason", w.getReason(),
+                             "duration", duration,
+                             "status", status);
         }
         MessageUtil.send(sender, "warnlist_footer", "total", String.valueOf(warnings.size()));
         return true;

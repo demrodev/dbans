@@ -5,11 +5,7 @@ import me.demro.dbans.DBans;
 import me.demro.dbans.util.MessageUtil;
 import me.demro.dbans.util.PresetManager;
 import me.demro.dbans.util.TimeUtil;
-import me.demro.dlibs.dbans.api.exception.DBansException;
-import me.demro.dlibs.dbans.api.exception.PlayerNotFoundException;
-import me.demro.dlibs.dbans.api.player.PlayerIdentity;
-import me.demro.dlibs.dbans.api.punishment.*;
-import org.bukkit.Bukkit;
+import me.demro.dlibs.dbans.api.punishment.PunishmentType;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -24,17 +20,22 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 public abstract class BasePunishCommand implements CommandExecutor {
 
-    protected final DBans plugin;
     protected static final UUID CONSOLE_UUID = UUID.nameUUIDFromBytes("CONSOLE".getBytes());
+    protected final DBans plugin;
 
     protected BasePunishCommand(DBans plugin) {
         this.plugin = plugin;
     }
 
     protected abstract PunishmentType getType(); // новый тип
+
     protected abstract String getPermission();
+
     protected abstract boolean isPermanent();
-    protected abstract void executePunishment(CommandSender sender, OfflinePlayer target, String reason, String finalServer, boolean silent, Long duration);
+
+    protected abstract void executePunishment(CommandSender sender, OfflinePlayer target, String reason,
+                                              String finalServer, boolean silent, Long duration
+    );
 
     protected Long parseDuration(String[] args, int startIndex) {
         return null;
@@ -71,7 +72,7 @@ public abstract class BasePunishCommand implements CommandExecutor {
 
         if (targetServer != null) {
             boolean canUseServer = sender.hasPermission("dbans.server.bypass") ||
-                    sender.hasPermission("dbans.server." + commandName);
+                                   sender.hasPermission("dbans.server." + commandName);
             if (!canUseServer) {
                 MessageUtil.send(sender, "no_server_permission", "command", commandName);
                 return true;
@@ -91,7 +92,7 @@ public abstract class BasePunishCommand implements CommandExecutor {
                 MessageUtil.send(sender, "preset_not_found", "name", presetName);
                 return true;
             }
-            if (preset.getType() != null && !preset.getType().equalsIgnoreCase(commandName)) {
+            if (preset.type() != null && !preset.type().equalsIgnoreCase(commandName)) {
                 MessageUtil.send(sender, "preset_wrong_type", "preset", presetName, "command", commandName);
                 return true;
             }
@@ -107,10 +108,10 @@ public abstract class BasePunishCommand implements CommandExecutor {
                 MessageUtil.send(sender, "preset_no_duration", "preset", presetName, "command", commandName);
                 return true;
             }
-            reason = preset.getReason();
+            reason = preset.reason();
             if (!preset.isPermanent()) {
                 try {
-                    duration = TimeUtil.parseDuration(preset.getDurationRaw());
+                    duration = TimeUtil.parseDuration(preset.durationRaw());
                 } catch (IllegalArgumentException e) {
                     MessageUtil.send(sender, "invalid_time");
                     return true;
@@ -198,8 +199,7 @@ public abstract class BasePunishCommand implements CommandExecutor {
         }
 
         // Кулдаун
-        if (sender instanceof Player) {
-            Player issuer = (Player) sender;
+        if (sender instanceof Player issuer) {
             if (plugin.getLimitsManager().isOnCooldown(issuer, commandName)) {
                 int remaining = plugin.getLimitsManager().getRemainingCooldown(issuer, commandName);
                 MessageUtil.send(sender, "command_on_cooldown", "command", commandName, "time", String.valueOf(remaining));

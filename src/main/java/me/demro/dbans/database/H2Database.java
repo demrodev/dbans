@@ -3,11 +3,7 @@ package me.demro.dbans.database;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import me.demro.dbans.DBans;
-import me.demro.dbans.model.JailPunishment;
-import me.demro.dbans.model.PlayerInfo;
-import me.demro.dbans.model.Punishment;
-import me.demro.dbans.model.PunishmentType;
-import me.demro.dbans.model.Warning;
+import me.demro.dbans.model.*;
 import me.demro.dbans.util.CacheManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -16,9 +12,6 @@ import java.sql.*;
 import java.util.*;
 
 public class H2Database implements DatabaseManager {
-    private final DBans plugin;
-    private HikariDataSource dataSource;
-    private CacheManager cache;
 
     static {
         try {
@@ -27,6 +20,10 @@ public class H2Database implements DatabaseManager {
             throw new RuntimeException("Failed to load H2 driver", e);
         }
     }
+
+    private final DBans plugin;
+    private HikariDataSource dataSource;
+    private CacheManager cache;
 
     public H2Database(DBans plugin) {
         this.plugin = plugin;
@@ -52,68 +49,68 @@ public class H2Database implements DatabaseManager {
         try (Connection conn = dataSource.getConnection();
              Statement st = conn.createStatement()) {
             st.execute("CREATE TABLE IF NOT EXISTS punishments (" +
-                    "id VARCHAR(10) PRIMARY KEY," +
-                    "player_uuid VARCHAR(36) NOT NULL," +
-                    "player_name VARCHAR(16) NOT NULL," +
-                    "issuer_uuid VARCHAR(36) NOT NULL," +
-                    "issuer_name VARCHAR(16) NOT NULL," +
-                    "type VARCHAR(10) NOT NULL," +
-                    "reason TEXT NOT NULL," +
-                    "start_time LONG NOT NULL," +
-                    "end_time LONG," +
-                    "active BOOLEAN DEFAULT TRUE," +
-                    "pardoned_by VARCHAR(16)," +
-                    "pardoned_at LONG," +
-                    "pardon_reason TEXT," +
-                    "server_name VARCHAR(64) DEFAULT 'unknown')");
+                       "id VARCHAR(10) PRIMARY KEY," +
+                       "player_uuid VARCHAR(36) NOT NULL," +
+                       "player_name VARCHAR(16) NOT NULL," +
+                       "issuer_uuid VARCHAR(36) NOT NULL," +
+                       "issuer_name VARCHAR(16) NOT NULL," +
+                       "type VARCHAR(10) NOT NULL," +
+                       "reason TEXT NOT NULL," +
+                       "start_time LONG NOT NULL," +
+                       "end_time LONG," +
+                       "active BOOLEAN DEFAULT TRUE," +
+                       "pardoned_by VARCHAR(16)," +
+                       "pardoned_at LONG," +
+                       "pardon_reason TEXT," +
+                       "server_name VARCHAR(64) DEFAULT 'unknown')");
             st.execute("CREATE INDEX IF NOT EXISTS idx_player_active ON punishments(player_uuid, type, active)");
             st.execute("CREATE TABLE IF NOT EXISTS ip_bans (" +
-                    "ip VARCHAR(45) PRIMARY KEY," +
-                    "player_uuid VARCHAR(36)," +
-                    "player_name VARCHAR(16)," +
-                    "issuer_name VARCHAR(16)," +
-                    "reason TEXT," +
-                    "start_time LONG," +
-                    "end_time LONG)");
+                       "ip VARCHAR(45) PRIMARY KEY," +
+                       "player_uuid VARCHAR(36)," +
+                       "player_name VARCHAR(16)," +
+                       "issuer_name VARCHAR(16)," +
+                       "reason TEXT," +
+                       "start_time LONG," +
+                       "end_time LONG)");
             st.execute("CREATE TABLE IF NOT EXISTS players (" +
-                    "uuid VARCHAR(36) PRIMARY KEY," +
-                    "name VARCHAR(16) NOT NULL," +
-                    "ip VARCHAR(45) NOT NULL," +
-                    "last_seen LONG NOT NULL)");
+                       "uuid VARCHAR(36) PRIMARY KEY," +
+                       "name VARCHAR(16) NOT NULL," +
+                       "ip VARCHAR(45) NOT NULL," +
+                       "last_seen LONG NOT NULL)");
             st.execute("CREATE TABLE IF NOT EXISTS jail_punishments (" +
-                    "id VARCHAR(10) PRIMARY KEY," +
-                    "player_uuid VARCHAR(36) NOT NULL," +
-                    "player_name VARCHAR(16) NOT NULL," +
-                    "issuer_uuid VARCHAR(36) NOT NULL," +
-                    "issuer_name VARCHAR(16) NOT NULL," +
-                    "reason TEXT NOT NULL," +
-                    "start_time BIGINT NOT NULL," +
-                    "end_time BIGINT," +
-                    "active BOOLEAN DEFAULT TRUE," +
-                    "server_name VARCHAR(64) DEFAULT 'unknown'," +
-                    "pardoned_by VARCHAR(16)," +
-                    "pardoned_at BIGINT," +
-                    "previous_location VARCHAR(255))");
+                       "id VARCHAR(10) PRIMARY KEY," +
+                       "player_uuid VARCHAR(36) NOT NULL," +
+                       "player_name VARCHAR(16) NOT NULL," +
+                       "issuer_uuid VARCHAR(36) NOT NULL," +
+                       "issuer_name VARCHAR(16) NOT NULL," +
+                       "reason TEXT NOT NULL," +
+                       "start_time BIGINT NOT NULL," +
+                       "end_time BIGINT," +
+                       "active BOOLEAN DEFAULT TRUE," +
+                       "server_name VARCHAR(64) DEFAULT 'unknown'," +
+                       "pardoned_by VARCHAR(16)," +
+                       "pardoned_at BIGINT," +
+                       "previous_location VARCHAR(255))");
             st.execute("ALTER TABLE jail_punishments ADD COLUMN IF NOT EXISTS jail_location VARCHAR(255)");
             st.execute("ALTER TABLE jail_punishments ADD COLUMN IF NOT EXISTS pending_unjail BOOLEAN DEFAULT FALSE");
             st.execute("CREATE TABLE IF NOT EXISTS warnings (" +
-                    "id VARCHAR(10) PRIMARY KEY," +
-                    "player_uuid VARCHAR(36) NOT NULL," +
-                    "player_name VARCHAR(16) NOT NULL," +
-                    "issuer_uuid VARCHAR(36) NOT NULL," +
-                    "issuer_name VARCHAR(16) NOT NULL," +
-                    "reason TEXT NOT NULL," +
-                    "start_time LONG NOT NULL," +
-                    "end_time LONG," +
-                    "active BOOLEAN DEFAULT TRUE," +
-                    "server_name VARCHAR(64) DEFAULT 'unknown'," +
-                    "pardoned_by VARCHAR(16)," +
-                    "pardoned_at LONG)");
+                       "id VARCHAR(10) PRIMARY KEY," +
+                       "player_uuid VARCHAR(36) NOT NULL," +
+                       "player_name VARCHAR(16) NOT NULL," +
+                       "issuer_uuid VARCHAR(36) NOT NULL," +
+                       "issuer_name VARCHAR(16) NOT NULL," +
+                       "reason TEXT NOT NULL," +
+                       "start_time LONG NOT NULL," +
+                       "end_time LONG," +
+                       "active BOOLEAN DEFAULT TRUE," +
+                       "server_name VARCHAR(64) DEFAULT 'unknown'," +
+                       "pardoned_by VARCHAR(16)," +
+                       "pardoned_at LONG)");
             st.execute("CREATE TABLE IF NOT EXISTS player_notifications (" +
-                    "uuid VARCHAR(36) NOT NULL," +
-                    "message_key VARCHAR(64) NOT NULL," +
-                    "placeholders VARCHAR(255)," +
-                    "created BIGINT NOT NULL)");
+                       "uuid VARCHAR(36) NOT NULL," +
+                       "message_key VARCHAR(64) NOT NULL," +
+                       "placeholders VARCHAR(255)," +
+                       "created BIGINT NOT NULL)");
             st.execute("CREATE INDEX IF NOT EXISTS idx_notif_uuid ON player_notifications(uuid)");
         }
     }
@@ -247,7 +244,8 @@ public class H2Database implements DatabaseManager {
     public List<Punishment> getPunishmentHistory(UUID playerUuid, boolean includeInactive) {
         List<Punishment> list = new ArrayList<>();
         String sql = "SELECT * FROM punishments WHERE player_uuid=? ORDER BY start_time DESC";
-        if (!includeInactive) sql = "SELECT * FROM punishments WHERE player_uuid=? AND active=TRUE ORDER BY start_time DESC";
+        if (!includeInactive)
+            sql = "SELECT * FROM punishments WHERE player_uuid=? AND active=TRUE ORDER BY start_time DESC";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, playerUuid.toString());
@@ -370,11 +368,11 @@ public class H2Database implements DatabaseManager {
     public List<Punishment> getAllPunishmentsIncludingJail() {
         List<Punishment> list = new ArrayList<>();
         String sql = "SELECT id, player_uuid, player_name, issuer_uuid, issuer_name, type, reason, start_time, end_time, active, server_name, pardoned_by, pardoned_at, pardon_reason FROM punishments " +
-                "UNION ALL " +
-                "SELECT id, player_uuid, player_name, issuer_uuid, issuer_name, 'JAIL' AS type, reason, start_time, end_time, active, server_name, pardoned_by, pardoned_at, NULL AS pardon_reason FROM jail_punishments " +
-                "UNION ALL " +
-                "SELECT id, player_uuid, player_name, issuer_uuid, issuer_name, 'WARNING' AS type, reason, start_time, end_time, active, server_name, pardoned_by, pardoned_at, NULL AS pardon_reason FROM warnings " +
-                "ORDER BY start_time DESC";
+                     "UNION ALL " +
+                     "SELECT id, player_uuid, player_name, issuer_uuid, issuer_name, 'JAIL' AS type, reason, start_time, end_time, active, server_name, pardoned_by, pardoned_at, NULL AS pardon_reason FROM jail_punishments " +
+                     "UNION ALL " +
+                     "SELECT id, player_uuid, player_name, issuer_uuid, issuer_name, 'WARNING' AS type, reason, start_time, end_time, active, server_name, pardoned_by, pardoned_at, NULL AS pardon_reason FROM warnings " +
+                     "ORDER BY start_time DESC";
         try (Connection conn = dataSource.getConnection();
              Statement st = conn.createStatement();
              ResultSet rs = st.executeQuery(sql)) {
@@ -391,11 +389,11 @@ public class H2Database implements DatabaseManager {
     public List<Punishment> getPunishmentHistoryIncludingJail(UUID playerUuid) {
         List<Punishment> list = new ArrayList<>();
         String sql = "SELECT id, player_uuid, player_name, issuer_uuid, issuer_name, type, reason, start_time, end_time, active, server_name, pardoned_by, pardoned_at, pardon_reason FROM punishments WHERE player_uuid = ? " +
-                "UNION ALL " +
-                "SELECT id, player_uuid, player_name, issuer_uuid, issuer_name, 'JAIL' AS type, reason, start_time, end_time, active, server_name, pardoned_by, pardoned_at, NULL AS pardon_reason FROM jail_punishments WHERE player_uuid = ? " +
-                "UNION ALL " +
-                "SELECT id, player_uuid, player_name, issuer_uuid, issuer_name, 'WARNING' AS type, reason, start_time, end_time, active, server_name, pardoned_by, pardoned_at, NULL AS pardon_reason FROM warnings WHERE player_uuid = ? " +
-                "ORDER BY start_time DESC";
+                     "UNION ALL " +
+                     "SELECT id, player_uuid, player_name, issuer_uuid, issuer_name, 'JAIL' AS type, reason, start_time, end_time, active, server_name, pardoned_by, pardoned_at, NULL AS pardon_reason FROM jail_punishments WHERE player_uuid = ? " +
+                     "UNION ALL " +
+                     "SELECT id, player_uuid, player_name, issuer_uuid, issuer_name, 'WARNING' AS type, reason, start_time, end_time, active, server_name, pardoned_by, pardoned_at, NULL AS pardon_reason FROM warnings WHERE player_uuid = ? " +
+                     "ORDER BY start_time DESC";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, playerUuid.toString());
@@ -477,7 +475,9 @@ public class H2Database implements DatabaseManager {
     // ===== IP-БАНЫ =====
 
     @Override
-    public void saveIpBan(String ip, UUID playerUuid, String playerName, String issuerName, String reason, long startTime, Long endTime) {
+    public void saveIpBan(String ip, UUID playerUuid, String playerName, String issuerName, String reason,
+                          long startTime, Long endTime
+    ) {
         String sql = "INSERT INTO ip_bans (ip, player_uuid, player_name, issuer_name, reason, start_time, end_time) VALUES (?,?,?,?,?,?,?)";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -1321,7 +1321,9 @@ public class H2Database implements DatabaseManager {
     }
 
     @Override
-    public Map<UUID, List<Punishment>> getActivePunishmentsForPlayers(Set<UUID> playerUuids, String currentServer, String mode) {
+    public Map<UUID, List<Punishment>> getActivePunishmentsForPlayers(Set<UUID> playerUuids, String currentServer,
+                                                                      String mode
+    ) {
         Map<UUID, List<Punishment>> result = new HashMap<>();
         if (playerUuids.isEmpty()) return result;
 
@@ -1460,12 +1462,13 @@ public class H2Database implements DatabaseManager {
                 if (world != null) {
                     try {
                         j.setPreviousLocation(new Location(world,
-                                Double.parseDouble(parts[1]),
-                                Double.parseDouble(parts[2]),
-                                Double.parseDouble(parts[3]),
-                                Float.parseFloat(parts[4]),
-                                Float.parseFloat(parts[5])));
-                    } catch (NumberFormatException ignored) {}
+                                                           Double.parseDouble(parts[1]),
+                                                           Double.parseDouble(parts[2]),
+                                                           Double.parseDouble(parts[3]),
+                                                           Float.parseFloat(parts[4]),
+                                                           Float.parseFloat(parts[5])));
+                    } catch (NumberFormatException ignored) {
+                    }
                 }
             }
         }
@@ -1477,12 +1480,13 @@ public class H2Database implements DatabaseManager {
                 if (world != null) {
                     try {
                         j.setJailLocation(new Location(world,
-                                Double.parseDouble(parts[1]),
-                                Double.parseDouble(parts[2]),
-                                Double.parseDouble(parts[3]),
-                                Float.parseFloat(parts[4]),
-                                Float.parseFloat(parts[5])));
-                    } catch (NumberFormatException ignored) {}
+                                                       Double.parseDouble(parts[1]),
+                                                       Double.parseDouble(parts[2]),
+                                                       Double.parseDouble(parts[3]),
+                                                       Float.parseFloat(parts[4]),
+                                                       Float.parseFloat(parts[5])));
+                    } catch (NumberFormatException ignored) {
+                    }
                 }
             }
         }

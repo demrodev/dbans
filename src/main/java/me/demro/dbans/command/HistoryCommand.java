@@ -16,8 +16,9 @@ import java.util.UUID;
 
 @Slf4j
 public class HistoryCommand implements CommandExecutor {
+
     private final DBans plugin;
-    private SimpleDateFormat dateFormat;
+    private final SimpleDateFormat dateFormat;
 
     public HistoryCommand(DBans plugin) {
         this.plugin = plugin;
@@ -52,12 +53,23 @@ public class HistoryCommand implements CommandExecutor {
             String date = dateFormat.format(new Date(p.getStartTime()));
             String typeName;
             switch (p.getType()) {
-                case BAN: typeName = "Бан"; break;
-                case MUTE: typeName = "Мут"; break;
-                case KICK: typeName = "Кик"; break;
-                case IPBAN: typeName = "IP-бан"; break;
-                case JAIL: typeName = "Тюрьма"; break;
-                default: typeName = "Наказание";
+                case BAN:
+                    typeName = "Бан";
+                    break;
+                case MUTE:
+                    typeName = "Мут";
+                    break;
+                case KICK:
+                    typeName = "Кик";
+                    break;
+                case IPBAN:
+                    typeName = "IP-бан";
+                    break;
+                case JAIL:
+                    typeName = "Тюрьма";
+                    break;
+                default:
+                    typeName = "Наказание";
             }
             String statusKey;
             if (!p.isActive()) statusKey = "status_pardoned";
@@ -66,13 +78,13 @@ public class HistoryCommand implements CommandExecutor {
             String statusRaw = MessageUtil.getRawMessage(statusKey);
             String status = MessageUtil.colorize(statusRaw);
             MessageUtil.send(sender, "history.entry",
-                    "id", p.getId(),
-                    "date", date,
-                    "type", typeName,
-                    "issuer", p.getIssuerName(),
-                    "reason", p.getReason(),
-                    "server", p.getServerName() != null ? p.getServerName() : "unknown",
-                    "status", status);
+                             "id", p.getId(),
+                             "date", date,
+                             "type", typeName,
+                             "issuer", p.getIssuerName(),
+                             "reason", p.getReason(),
+                             "server", p.getServerName() != null ? p.getServerName() : "unknown",
+                             "status", status);
         }
         MessageUtil.send(sender, "history.footer", "total", String.valueOf(punishments.size()));
         return true;

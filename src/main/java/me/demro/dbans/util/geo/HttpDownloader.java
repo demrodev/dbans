@@ -10,6 +10,7 @@ import java.net.URL;
 
 @Slf4j
 public class HttpDownloader {
+
     public static boolean downloadFile(String urlString, File destination) {
         try {
             URL url = new URL(urlString);

@@ -16,7 +16,7 @@ groups:
       kick: 60
       banip: 0
     priority: 1
-    immunities: []
+    immunities: [ ]
   vip:
     max_durations:
       ban: "2h"
@@ -29,7 +29,7 @@ groups:
       mute: 300
       tempmute: 300
     priority: 5
-    immunities: []
+    immunities: [ ]
   helper:
     max_durations:
       ban: "12h"
@@ -43,7 +43,7 @@ groups:
       tempmute: 120
       kick: 30
     priority: 20
-    immunities: []
+    immunities: [ ]
   moderator:
     max_durations:
       ban: "7d"
@@ -57,7 +57,7 @@ groups:
       tempmute: 30
       kick: 15
     priority: 50
-    immunities: []
+    immunities: [ ]
   admin:
     max_durations:
       ban: "0"

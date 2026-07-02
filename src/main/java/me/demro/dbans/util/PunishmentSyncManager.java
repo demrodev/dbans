@@ -15,6 +15,7 @@ import java.util.UUID;
 
 @Slf4j
 public class PunishmentSyncManager {
+
     private final DBans plugin;
     private final Map<UUID, String> lastBanId = new HashMap<>();
     private final Map<UUID, String> lastMuteId = new HashMap<>();
@@ -42,7 +43,7 @@ public class PunishmentSyncManager {
     private void checkBan(Player player) {
         UUID uuid = player.getUniqueId();
         Punishment ban = plugin.getDatabase().getActivePunishment(uuid, PunishmentType.BAN,
-                plugin.getServerName(), plugin.getMode());
+                                                                  plugin.getServerName(), plugin.getMode());
         if (ban != null && !ban.isExpired()) {
             String banId = ban.getId();
             if (!banId.equals(lastBanId.get(uuid))) {
@@ -57,7 +58,7 @@ public class PunishmentSyncManager {
     private void kickForBan(Player player, Punishment ban) {
         if (!player.isOnline()) return;
         if (plugin.getMode().equalsIgnoreCase("sync_static") &&
-                !ban.getServerName().equals(plugin.getServerName())) {
+            !ban.getServerName().equals(plugin.getServerName())) {
             return;
         }
         boolean isTemp = ban.getEndTime() != null;
@@ -72,10 +73,10 @@ public class PunishmentSyncManager {
                 ? plugin.getConfig().getString("permanent_word", "навсегда")
                 : TimeUtil.formatDuration(ban.getEndTime() - System.currentTimeMillis());
         kickMsg = kickMsg.replace("%reason%", ban.getReason())
-                .replace("%sender%", ban.getIssuerName())
-                .replace("%duration%", duration)
-                .replace("%server%", ban.getServerName() != null ? ban.getServerName() : "unknown")
-                .replace("%id%", ban.getId());
+                         .replace("%sender%", ban.getIssuerName())
+                         .replace("%duration%", duration)
+                         .replace("%server%", ban.getServerName() != null ? ban.getServerName() : "unknown")
+                         .replace("%id%", ban.getId());
         Component kickComponent = MessageUtil.deserializeForKick(kickMsg);
         player.kick(kickComponent);
     }
@@ -83,7 +84,7 @@ public class PunishmentSyncManager {
     private void checkMuteForChat(Player player) {
         UUID uuid = player.getUniqueId();
         Punishment mute = plugin.getDatabase().getActivePunishment(uuid, PunishmentType.MUTE,
-                plugin.getServerName(), plugin.getMode());
+                                                                   plugin.getServerName(), plugin.getMode());
         if (mute != null && !mute.isExpired()) {
             String muteId = mute.getId();
             if (!muteId.equals(lastMuteId.get(uuid))) {
@@ -122,11 +123,11 @@ public class PunishmentSyncManager {
                 ? plugin.getConfig().getString("permanent_word", "навсегда")
                 : TimeUtil.formatDuration(mute.getEndTime() - System.currentTimeMillis());
         MessageUtil.send(player, key,
-                "sender", mute.getIssuerName(),
-                "reason", mute.getReason(),
-                "duration", durationStr,
-                "server", mute.getServerName(),
-                "id", mute.getId());
+                         "sender", mute.getIssuerName(),
+                         "reason", mute.getReason(),
+                         "duration", durationStr,
+                         "server", mute.getServerName(),
+                         "id", mute.getId());
     }
 
     public void markMuteNotified(UUID playerUuid, String muteId) {

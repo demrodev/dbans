@@ -33,10 +33,10 @@ public class AltServiceImpl implements AltService {
 
         List<String> altNames = plugin.getAltAccountManager().findAltAccounts(target.getName());
         List<AltAccount> accounts = altNames.stream()
-                .map(name -> Bukkit.getOfflinePlayer(name))
-                .filter(p -> p.hasPlayedBefore() || p.isOnline())
-                .map(p -> new AltAccount(p.getUniqueId(), AltDetectionReason.SHARED_IP))
-                .collect(Collectors.toList());
+                                            .map(name -> Bukkit.getOfflinePlayer(name))
+                                            .filter(p -> p.hasPlayedBefore() || p.isOnline())
+                                            .map(p -> new AltAccount(p.getUniqueId(), AltDetectionReason.SHARED_IP))
+                                            .collect(Collectors.toList());
 
         return CompletableFuture.completedFuture(accounts);
     }

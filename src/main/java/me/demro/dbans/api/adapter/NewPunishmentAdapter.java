@@ -3,7 +3,10 @@ package me.demro.dbans.api.adapter;
 import me.demro.dbans.model.JailPunishment;
 import me.demro.dbans.model.Punishment;
 import me.demro.dbans.model.Warning;
-import me.demro.dlibs.dbans.api.punishment.*;
+import me.demro.dlibs.dbans.api.punishment.PunishmentId;
+import me.demro.dlibs.dbans.api.punishment.PunishmentIssuer;
+import me.demro.dlibs.dbans.api.punishment.PunishmentReason;
+import me.demro.dlibs.dbans.api.punishment.PunishmentStatus;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.Instant;
@@ -79,15 +82,24 @@ public final class NewPunishmentAdapter implements me.demro.dlibs.dbans.api.puni
         this.serverName = w.getServerName();
     }
 
-    private static me.demro.dlibs.dbans.api.punishment.PunishmentType mapType(me.demro.dbans.model.PunishmentType oldType) {
+    private static me.demro.dlibs.dbans.api.punishment.PunishmentType mapType(
+            me.demro.dbans.model.PunishmentType oldType
+    ) {
         switch (oldType) {
-            case BAN: return me.demro.dlibs.dbans.api.punishment.PunishmentType.BAN;
-            case MUTE: return me.demro.dlibs.dbans.api.punishment.PunishmentType.MUTE;
-            case KICK: return me.demro.dlibs.dbans.api.punishment.PunishmentType.KICK;
-            case IPBAN: return me.demro.dlibs.dbans.api.punishment.PunishmentType.IP_BAN;
-            case JAIL: return me.demro.dlibs.dbans.api.punishment.PunishmentType.JAIL;
-            case WARNING: return me.demro.dlibs.dbans.api.punishment.PunishmentType.WARNING;
-            default: throw new IllegalArgumentException("Unknown type: " + oldType);
+            case BAN:
+                return me.demro.dlibs.dbans.api.punishment.PunishmentType.BAN;
+            case MUTE:
+                return me.demro.dlibs.dbans.api.punishment.PunishmentType.MUTE;
+            case KICK:
+                return me.demro.dlibs.dbans.api.punishment.PunishmentType.KICK;
+            case IPBAN:
+                return me.demro.dlibs.dbans.api.punishment.PunishmentType.IP_BAN;
+            case JAIL:
+                return me.demro.dlibs.dbans.api.punishment.PunishmentType.JAIL;
+            case WARNING:
+                return me.demro.dlibs.dbans.api.punishment.PunishmentType.WARNING;
+            default:
+                throw new IllegalArgumentException("Unknown type: " + oldType);
         }
     }
 

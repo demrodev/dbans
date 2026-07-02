@@ -28,21 +28,22 @@ public class PunishService {
     /**
      * Applies a punishment using the new API.
      *
-     * @param targetUuid  UUID of the punished player
-     * @param targetName  Name of the punished player
-     * @param issuerUuid  UUID of the issuer
-     * @param issuerName  Name of the issuer
-     * @param type        Punishment type (BAN, MUTE, KICK, IPBAN, JAIL, WARNING)
-     * @param reason      Punishment reason
-     * @param duration    Duration in milliseconds (null or <=0 for permanent/instant)
-     * @param server      Server name
-     * @param silent      Whether the punishment should be silent
+     * @param targetUuid UUID of the punished player
+     * @param targetName Name of the punished player
+     * @param issuerUuid UUID of the issuer
+     * @param issuerName Name of the issuer
+     * @param type       Punishment type (BAN, MUTE, KICK, IPBAN, JAIL, WARNING)
+     * @param reason     Punishment reason
+     * @param duration   Duration in milliseconds (null or <=0 for permanent/instant)
+     * @param server     Server name
+     * @param silent     Whether the punishment should be silent
      * @return The created punishment (internal model), or null if failed
      */
     public Punishment applyPunishment(UUID targetUuid, String targetName,
                                       UUID issuerUuid, String issuerName,
                                       PunishmentType type, String reason,
-                                      Long duration, String server, boolean silent) {
+                                      Long duration, String server, boolean silent
+    ) {
 
         // Convert internal PunishmentType to API PunishmentType
         me.demro.dlibs.dbans.api.punishment.PunishmentType apiType;
@@ -89,18 +90,18 @@ public class PunishService {
 
         // Build request
         PunishmentCreateRequest request = PunishmentCreateRequest.builder()
-                .target(PlayerIdentity.of(targetUuid, targetName))
-                .type(apiType)
-                .reason(PunishmentReason.of(reason))
-                .duration(apiDuration)
-                .issuer(issuer)
-                .serverName(server)
-                .options(PunishmentOptions.builder()
-                        .silent(silent)
-                        .broadcast(!silent)
-                        .notifyTarget(true)
-                        .build())
-                .build();
+                                                                 .target(PlayerIdentity.of(targetUuid, targetName))
+                                                                 .type(apiType)
+                                                                 .reason(PunishmentReason.of(reason))
+                                                                 .duration(apiDuration)
+                                                                 .issuer(issuer)
+                                                                 .serverName(server)
+                                                                 .options(PunishmentOptions.builder()
+                                                                                           .silent(silent)
+                                                                                           .broadcast(!silent)
+                                                                                           .notifyTarget(true)
+                                                                                           .build())
+                                                                 .build();
 
         try {
             // Execute punishment creation via new API

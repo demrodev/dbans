@@ -11,6 +11,7 @@ import org.bukkit.command.CommandSender;
 
 @Slf4j
 public class DropPunishCommand implements CommandExecutor {
+
     private final DBans plugin;
 
     public DropPunishCommand(DBans plugin) {

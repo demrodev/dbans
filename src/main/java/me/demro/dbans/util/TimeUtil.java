@@ -9,12 +9,15 @@ import java.util.regex.Pattern;
 
 @Slf4j
 public class TimeUtil {
-    private static DBans plugin;
+
     private static final Pattern TIME_PATTERN = Pattern.compile("(\\d+)([smhd])");
     private static final java.util.Map<Long, String> formattedCache = new java.util.concurrent.ConcurrentHashMap<>();
     private static final long CACHE_MAX_SIZE = 1000;
+    private static DBans plugin;
 
-    public static void init(DBans pl) { plugin = pl; }
+    public static void init(DBans pl) {
+        plugin = pl;
+    }
 
     public static long parseDuration(String input) throws IllegalArgumentException {
         Matcher m = TIME_PATTERN.matcher(input);
@@ -25,11 +28,20 @@ public class TimeUtil {
             char unit = m.group(2).charAt(0);
             long millis;
             switch (unit) {
-                case 's': millis = TimeUnit.SECONDS.toMillis(num); break;
-                case 'm': millis = TimeUnit.MINUTES.toMillis(num); break;
-                case 'h': millis = TimeUnit.HOURS.toMillis(num); break;
-                case 'd': millis = TimeUnit.DAYS.toMillis(num); break;
-                default: throw new IllegalArgumentException("Invalid time unit: " + unit);
+                case 's':
+                    millis = TimeUnit.SECONDS.toMillis(num);
+                    break;
+                case 'm':
+                    millis = TimeUnit.MINUTES.toMillis(num);
+                    break;
+                case 'h':
+                    millis = TimeUnit.HOURS.toMillis(num);
+                    break;
+                case 'd':
+                    millis = TimeUnit.DAYS.toMillis(num);
+                    break;
+                default:
+                    throw new IllegalArgumentException("Invalid time unit: " + unit);
             }
             total += millis;
             lastEnd = m.end();
@@ -78,11 +90,14 @@ public class TimeUtil {
             return plugin.getConfig().getString(path + "many", unitKey);
         }
         switch (lastDigit) {
-            case 1: return plugin.getConfig().getString(path + "one", unitKey);
+            case 1:
+                return plugin.getConfig().getString(path + "one", unitKey);
             case 2:
             case 3:
-            case 4: return plugin.getConfig().getString(path + "few", unitKey);
-            default: return plugin.getConfig().getString(path + "many", unitKey);
+            case 4:
+                return plugin.getConfig().getString(path + "few", unitKey);
+            default:
+                return plugin.getConfig().getString(path + "many", unitKey);
         }
     }
 }

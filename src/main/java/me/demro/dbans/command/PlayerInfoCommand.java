@@ -15,6 +15,7 @@ import java.util.List;
 
 @Slf4j
 public class PlayerInfoCommand implements CommandExecutor {
+
     private final DBans plugin;
 
     public PlayerInfoCommand(DBans plugin) {
@@ -55,10 +56,10 @@ public class PlayerInfoCommand implements CommandExecutor {
                 String typeName = p.getType().name();
                 String expires = (p.getEndTime() == null) ? "навсегда" : TimeUtil.formatDuration(p.getEndTime() - System.currentTimeMillis());
                 MessageUtil.send(sender, "playerinfo_active_entry",
-                        "id", p.getId(),
-                        "type", typeName,
-                        "reason", p.getReason(),
-                        "expires", expires);
+                                 "id", p.getId(),
+                                 "type", typeName,
+                                 "reason", p.getReason(),
+                                 "expires", expires);
             }
         }
         return true;

@@ -15,6 +15,7 @@ import java.util.UUID;
 
 @Slf4j
 public class InspectCommand implements CommandExecutor {
+
     private final DBans plugin;
 
     public InspectCommand(DBans plugin) {
@@ -49,18 +50,18 @@ public class InspectCommand implements CommandExecutor {
             String server = p.getServerName() != null ? p.getServerName() : "unknown";
             if (p.getEndTime() == null) {
                 MessageUtil.send(sender, "inspect.entry_permanent",
-                        "type", typeKey.equals("ban") ? "Бан" : (typeKey.equals("mute") ? "Мут" : "Тюрьма"),
-                        "id", p.getId(),
-                        "reason", p.getReason(),
-                        "server", server);
+                                 "type", typeKey.equals("ban") ? "Бан" : (typeKey.equals("mute") ? "Мут" : "Тюрьма"),
+                                 "id", p.getId(),
+                                 "reason", p.getReason(),
+                                 "server", server);
             } else {
                 String expires = TimeUtil.formatDuration(p.getEndTime() - System.currentTimeMillis());
                 String entryKey = "inspect.entry_" + typeKey;
                 MessageUtil.send(sender, entryKey,
-                        "id", p.getId(),
-                        "reason", p.getReason(),
-                        "expires", expires,
-                        "server", server);
+                                 "id", p.getId(),
+                                 "reason", p.getReason(),
+                                 "expires", expires,
+                                 "server", server);
             }
         }
         MessageUtil.send(sender, "inspect.footer");

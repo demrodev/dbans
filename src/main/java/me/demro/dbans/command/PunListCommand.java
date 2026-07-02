@@ -15,8 +15,9 @@ import java.util.List;
 
 @Slf4j
 public class PunListCommand implements CommandExecutor {
+
     private final DBans plugin;
-    private SimpleDateFormat dateFormat;
+    private final SimpleDateFormat dateFormat;
 
     public PunListCommand(DBans plugin) {
         this.plugin = plugin;
@@ -35,7 +36,8 @@ public class PunListCommand implements CommandExecutor {
             try {
                 page = Integer.parseInt(args[0]);
                 if (page < 1) page = 1;
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException ignored) {
+            }
         }
         int perPage = plugin.getConfig().getInt("punlist.entries_per_page", 10);
         List<Punishment> all = plugin.getDatabase().getAllPunishmentsIncludingJail();
@@ -49,8 +51,8 @@ public class PunListCommand implements CommandExecutor {
         int end = Math.min(start + perPage, all.size());
         List<Punishment> sublist = all.subList(start, end);
         MessageUtil.send(sender, "punlist.header",
-                "page", String.valueOf(page),
-                "total_pages", String.valueOf(totalPages));
+                         "page", String.valueOf(page),
+                         "total_pages", String.valueOf(totalPages));
         for (Punishment p : sublist) {
             String date = dateFormat.format(new Date(p.getStartTime()));
             String duration;
@@ -61,12 +63,23 @@ public class PunListCommand implements CommandExecutor {
             }
             String typeName;
             switch (p.getType()) {
-                case BAN: typeName = "Бан"; break;
-                case MUTE: typeName = "Мут"; break;
-                case KICK: typeName = "Кик"; break;
-                case IPBAN: typeName = "IP-бан"; break;
-                case JAIL: typeName = "Тюрьма"; break;
-                default: typeName = "Наказание";
+                case BAN:
+                    typeName = "Бан";
+                    break;
+                case MUTE:
+                    typeName = "Мут";
+                    break;
+                case KICK:
+                    typeName = "Кик";
+                    break;
+                case IPBAN:
+                    typeName = "IP-бан";
+                    break;
+                case JAIL:
+                    typeName = "Тюрьма";
+                    break;
+                default:
+                    typeName = "Наказание";
             }
             String statusKey;
             if (!p.isActive()) statusKey = "status_pardoned";
@@ -75,15 +88,15 @@ public class PunListCommand implements CommandExecutor {
             String statusRaw = MessageUtil.getRawMessage(statusKey);
             String status = MessageUtil.colorize(statusRaw);
             MessageUtil.send(sender, "punlist.entry",
-                    "id", p.getId(),
-                    "player", p.getPlayerName(),
-                    "issuer", p.getIssuerName(),
-                    "date", date,
-                    "duration", duration,
-                    "reason", p.getReason(),
-                    "server", p.getServerName() != null ? p.getServerName() : "unknown",
-                    "type", typeName,
-                    "status", status);
+                             "id", p.getId(),
+                             "player", p.getPlayerName(),
+                             "issuer", p.getIssuerName(),
+                             "date", date,
+                             "duration", duration,
+                             "reason", p.getReason(),
+                             "server", p.getServerName() != null ? p.getServerName() : "unknown",
+                             "type", typeName,
+                             "status", status);
         }
         MessageUtil.send(sender, "punlist.footer");
         return true;

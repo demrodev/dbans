@@ -5,10 +5,7 @@ import me.demro.dbans.model.Punishment;
 import me.demro.dbans.model.Warning;
 import me.demro.dlibs.dbans.api.punishment.PunishmentCreateRequest;
 import me.demro.dlibs.dbans.api.punishment.PunishmentDuration;
-import org.jetbrains.annotations.NotNull;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -16,7 +13,8 @@ import java.util.UUID;
  */
 public final class PunishmentMapper {
 
-    private PunishmentMapper() {}
+    private PunishmentMapper() {
+    }
 
     /**
      * Converts a {@link PunishmentCreateRequest} into an internal {@link Punishment} builder.
@@ -24,25 +22,38 @@ public final class PunishmentMapper {
      */
     public static Punishment.PunishmentBuilder toInternalPunishment(PunishmentCreateRequest request) {
         Punishment.PunishmentBuilder builder = Punishment.builder()
-                .playerUuid(request.target().uuid().orElseThrow(() -> new IllegalArgumentException("Target UUID required")))
-                .playerName(request.target().name().orElse("Unknown"))
-                .issuerUuid(request.issuer().uuid().orElse(UUID.nameUUIDFromBytes("CONSOLE".getBytes())))
-                .issuerName(request.issuer().name())
-                .reason(request.reason().value())
-                .startTime(System.currentTimeMillis())
-                .active(true)
-                .serverName(request.serverName());
+                                                         .playerUuid(request.target().uuid().orElseThrow(() -> new IllegalArgumentException("Target UUID required")))
+                                                         .playerName(request.target().name().orElse("Unknown"))
+                                                         .issuerUuid(request.issuer().uuid().orElse(UUID.nameUUIDFromBytes("CONSOLE".getBytes())))
+                                                         .issuerName(request.issuer().name())
+                                                         .reason(request.reason().value())
+                                                         .startTime(System.currentTimeMillis())
+                                                         .active(true)
+                                                         .serverName(request.serverName());
 
         // Map type
         me.demro.dbans.model.PunishmentType internalType;
         switch (request.type()) {
-            case BAN: internalType = me.demro.dbans.model.PunishmentType.BAN; break;
-            case MUTE: internalType = me.demro.dbans.model.PunishmentType.MUTE; break;
-            case KICK: internalType = me.demro.dbans.model.PunishmentType.KICK; break;
-            case IP_BAN: internalType = me.demro.dbans.model.PunishmentType.IPBAN; break;
-            case JAIL: internalType = me.demro.dbans.model.PunishmentType.JAIL; break;
-            case WARNING: internalType = me.demro.dbans.model.PunishmentType.WARNING; break;
-            default: throw new IllegalArgumentException("Unsupported type: " + request.type());
+            case BAN:
+                internalType = me.demro.dbans.model.PunishmentType.BAN;
+                break;
+            case MUTE:
+                internalType = me.demro.dbans.model.PunishmentType.MUTE;
+                break;
+            case KICK:
+                internalType = me.demro.dbans.model.PunishmentType.KICK;
+                break;
+            case IP_BAN:
+                internalType = me.demro.dbans.model.PunishmentType.IPBAN;
+                break;
+            case JAIL:
+                internalType = me.demro.dbans.model.PunishmentType.JAIL;
+                break;
+            case WARNING:
+                internalType = me.demro.dbans.model.PunishmentType.WARNING;
+                break;
+            default:
+                throw new IllegalArgumentException("Unsupported type: " + request.type());
         }
         builder.type(internalType);
 

@@ -8,6 +8,7 @@ import java.util.List;
 
 @Slf4j
 public class AltAccountManager {
+
     private final DBans plugin;
 
     public AltAccountManager(DBans plugin) {
@@ -17,6 +18,7 @@ public class AltAccountManager {
 
     /**
      * Находит альт-аккаунты для указанного игрока по общему IP.
+     *
      * @param playerName имя игрока
      * @return список имён альт-аккаунтов (без самого игрока)
      */

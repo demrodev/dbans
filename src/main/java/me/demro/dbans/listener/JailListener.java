@@ -19,8 +19,8 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
-import org.bukkit.event.player.*;
 import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.event.player.*;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -89,8 +89,7 @@ public class JailListener implements Listener {
 
     @EventHandler
     public void onInventoryOpen(InventoryOpenEvent event) {
-        if (event.getPlayer() instanceof Player) {
-            Player p = (Player) event.getPlayer();
+        if (event.getPlayer() instanceof Player p) {
             if (isInJailWorld(p) && !p.hasPermission("dbans.jail.bypass") && isJailed(p)) {
                 event.setCancelled(true);
                 MessageUtil.send(p, "jail_world_inventory");
@@ -116,8 +115,7 @@ public class JailListener implements Listener {
 
     @EventHandler
     public void onEntityDamage(EntityDamageEvent event) {
-        if (event.getEntity() instanceof Player) {
-            Player p = (Player) event.getEntity();
+        if (event.getEntity() instanceof Player p) {
             if (isInJailWorld(p) && !p.hasPermission("dbans.jail.bypass") && isJailed(p)) {
                 event.setCancelled(true);
             }
@@ -126,14 +124,12 @@ public class JailListener implements Listener {
 
     @EventHandler
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
-        if (event.getDamager() instanceof Player) {
-            Player p = (Player) event.getDamager();
+        if (event.getDamager() instanceof Player p) {
             if (isInJailWorld(p) && !p.hasPermission("dbans.jail.bypass") && isJailed(p)) {
                 event.setCancelled(true);
             }
         }
-        if (event.getEntity() instanceof Player) {
-            Player p = (Player) event.getEntity();
+        if (event.getEntity() instanceof Player p) {
             if (isInJailWorld(p) && !p.hasPermission("dbans.jail.bypass") && isJailed(p)) {
                 event.setCancelled(true);
             }
@@ -142,8 +138,7 @@ public class JailListener implements Listener {
 
     @EventHandler
     public void onFoodLevelChange(FoodLevelChangeEvent event) {
-        if (event.getEntity() instanceof Player) {
-            Player p = (Player) event.getEntity();
+        if (event.getEntity() instanceof Player p) {
             if (isInJailWorld(p) && !p.hasPermission("dbans.jail.bypass") && isJailed(p)) {
                 event.setCancelled(true);
                 p.setFoodLevel(20);
@@ -235,10 +230,10 @@ public class JailListener implements Listener {
                 Punishment jail = jails.get(0);
                 String duration = jail.isPermanent() ? "навсегда" : TimeUtil.formatDuration(jail.expiresAt().get().toEpochMilli() - System.currentTimeMillis());
                 MessageUtil.send(p, "jail_no_chat",
-                        "sender", jail.issuer().name(),
-                        "reason", jail.reason().value(),
-                        "server", jail.serverName(),
-                        "duration", duration);
+                                 "sender", jail.issuer().name(),
+                                 "reason", jail.reason().value(),
+                                 "server", jail.serverName(),
+                                 "duration", duration);
             } else {
                 MessageUtil.send(p, "jail_no_chat_fallback");
             }
@@ -256,10 +251,10 @@ public class JailListener implements Listener {
                 Punishment jail = jails.get(0);
                 String duration = jail.isPermanent() ? "навсегда" : TimeUtil.formatDuration(jail.expiresAt().get().toEpochMilli() - System.currentTimeMillis());
                 MessageUtil.send(p, "jail_no_commands",
-                        "sender", jail.issuer().name(),
-                        "reason", jail.reason().value(),
-                        "server", jail.serverName(),
-                        "duration", duration);
+                                 "sender", jail.issuer().name(),
+                                 "reason", jail.reason().value(),
+                                 "server", jail.serverName(),
+                                 "duration", duration);
             } else {
                 MessageUtil.send(p, "jail_no_commands_fallback");
             }

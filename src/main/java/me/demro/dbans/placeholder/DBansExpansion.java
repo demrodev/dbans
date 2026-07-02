@@ -1,14 +1,15 @@
 package me.demro.dbans.placeholder;
 
 import lombok.extern.slf4j.Slf4j;
-import me.demro.dbans.DBans;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
+import me.demro.dbans.DBans;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @Slf4j
 public class DBansExpansion extends PlaceholderExpansion {
+
     private final DBans plugin;
 
     public DBansExpansion(DBans plugin) {

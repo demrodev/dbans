@@ -1,6 +1,5 @@
 package me.demro.dbans.util;
 
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import net.luckperms.api.LuckPerms;
@@ -22,14 +21,14 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class LimitsManager {
+
+    private static final long CACHE_TTL_MS = TimeUnit.SECONDS.toMillis(5);
     private final DBans plugin;
     private final LuckPerms luckPerms;
     private final Map<String, GroupData> groups = new HashMap<>();
-    private GroupData defaultData;
-
     private final Map<UUID, CachedPlayerData> playerDataCache = new ConcurrentHashMap<>();
-    private static final long CACHE_TTL_MS = TimeUnit.SECONDS.toMillis(5);
     private final Map<String, Long> cooldowns = new ConcurrentHashMap<>();
+    private GroupData defaultData;
 
     public LimitsManager(DBans plugin) {
         this.plugin = plugin;
@@ -212,16 +211,15 @@ public class LimitsManager {
     }
 
     public boolean canPunish(CommandSender issuer, OfflinePlayer target) {
-        if (!(issuer instanceof Player)) return true;
-        Player issuerPlayer = (Player) issuer;
+        if (!(issuer instanceof Player issuerPlayer)) return true;
         if (issuerPlayer.hasPermission("dbans.priority.bypass")) return true;
         int issuerPriority = getPriority(issuerPlayer);
         int targetPriority = getPriority(target);
         if (issuerPriority < targetPriority) {
             MessageUtil.send(issuer, "cannot_punish_higher_priority",
-                    "target", target.getName(),
-                    "target_priority", String.valueOf(targetPriority),
-                    "issuer_priority", String.valueOf(issuerPriority));
+                             "target", target.getName(),
+                             "target_priority", String.valueOf(targetPriority),
+                             "issuer_priority", String.valueOf(issuerPriority));
             return false;
         }
         return true;
@@ -233,23 +231,14 @@ public class LimitsManager {
     }
 
     private static class GroupData {
+
         int priority = 0;
         Map<String, Long> maxDurations = new HashMap<>();
         Map<String, Integer> cooldowns = new HashMap<>();
         List<String> immunities = java.util.Collections.emptyList();
     }
 
-    private static class CachedPlayerData {
-        final GroupData data;
-        final int priority;
-        final String group;
-        final long timestamp;
+    private record CachedPlayerData(GroupData data, int priority, String group, long timestamp) {
 
-        CachedPlayerData(GroupData data, int priority, String group, long timestamp) {
-            this.data = data;
-            this.priority = priority;
-            this.group = group;
-            this.timestamp = timestamp;
-        }
     }
 }

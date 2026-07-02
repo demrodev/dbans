@@ -1,8 +1,8 @@
 package me.demro.dbans.sync;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 
 import java.util.Map;
 
@@ -10,6 +10,7 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SyncMessage {
+
     private String type;
     private Map<String, Object> data;
 }

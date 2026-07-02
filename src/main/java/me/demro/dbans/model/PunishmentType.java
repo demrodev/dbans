@@ -7,5 +7,5 @@ public enum PunishmentType {
     KICK,
     IPBAN,
     JAIL,
-    WARNING;   // новый тип
+    WARNING   // новый тип
 }

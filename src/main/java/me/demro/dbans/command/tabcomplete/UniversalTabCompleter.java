@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 public class UniversalTabCompleter implements TabCompleter {
+
     private final DBans plugin;
     private final Map<String, List<String>> presetCache = new ConcurrentHashMap<>();
     private final Map<String, List<String>> activeIdsCache = new ConcurrentHashMap<>();
@@ -253,8 +254,8 @@ public class UniversalTabCompleter implements TabCompleter {
 
     private List<String> getOnlinePlayers() {
         return Bukkit.getOnlinePlayers().stream()
-                .map(Player::getName)
-                .collect(Collectors.toList());
+                     .map(Player::getName)
+                     .collect(Collectors.toList());
     }
 
     private List<String> getCommonDurations() {

@@ -18,21 +18,20 @@ import java.util.regex.Pattern;
 
 @Slf4j
 public class MessageUtil {
-    private static DBans plugin;
-    private static YamlConfiguration messagesConfig;
+
     private static final Map<String, String> cache = new HashMap<>();
     private static final Pattern HOVER_PATTERN = Pattern.compile("\\{hover:(.+)\\}$", Pattern.DOTALL);
     private static final Pattern HEX_PATTERN = Pattern.compile("&#([A-Fa-f0-9]{6})");
-
     private static final LegacyComponentSerializer CHAT_SERIALIZER = LegacyComponentSerializer.builder()
-            .character('&')
-            .hexColors()
-            .build();
-
+                                                                                              .character('&')
+                                                                                              .hexColors()
+                                                                                              .build();
     private static final LegacyComponentSerializer KICK_SERIALIZER = LegacyComponentSerializer.builder()
-            .character('§')
-            .hexColors()
-            .build();
+                                                                                              .character('§')
+                                                                                              .hexColors()
+                                                                                              .build();
+    private static DBans plugin;
+    private static YamlConfiguration messagesConfig;
 
     public static void init(DBans pl) {
         plugin = pl;

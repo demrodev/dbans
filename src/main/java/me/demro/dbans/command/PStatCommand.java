@@ -13,6 +13,7 @@ import java.util.List;
 
 @Slf4j
 public class PStatCommand implements CommandExecutor {
+
     private final DBans plugin;
 
     public PStatCommand(DBans plugin) {
@@ -40,18 +41,26 @@ public class PStatCommand implements CommandExecutor {
         int bans = 0, mutes = 0, kicks = 0, ipbans = 0;
         for (Punishment p : all) {
             switch (p.getType()) {
-                case BAN: bans++; break;
-                case MUTE: mutes++; break;
-                case KICK: kicks++; break;
-                case IPBAN: ipbans++; break;
+                case BAN:
+                    bans++;
+                    break;
+                case MUTE:
+                    mutes++;
+                    break;
+                case KICK:
+                    kicks++;
+                    break;
+                case IPBAN:
+                    ipbans++;
+                    break;
             }
         }
         MessageUtil.send(sender, "pstat_result",
-                "target", target.getName(),
-                "bans", String.valueOf(bans),
-                "mutes", String.valueOf(mutes),
-                "kicks", String.valueOf(kicks),
-                "ipbans", String.valueOf(ipbans));
+                         "target", target.getName(),
+                         "bans", String.valueOf(bans),
+                         "mutes", String.valueOf(mutes),
+                         "kicks", String.valueOf(kicks),
+                         "ipbans", String.valueOf(ipbans));
         return true;
     }
 }

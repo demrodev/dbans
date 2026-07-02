@@ -2,10 +2,10 @@ package me.demro.dbans.command;
 
 import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
+import me.demro.dbans.util.MessageUtil;
 import me.demro.dlibs.dbans.api.exception.PlayerNotFoundException;
 import me.demro.dlibs.dbans.api.player.PlayerIdentity;
 import me.demro.dlibs.dbans.api.punishment.*;
-import me.demro.dbans.util.MessageUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
@@ -21,9 +21,9 @@ import java.util.regex.Pattern;
 @Slf4j
 public class BanIpCommand implements CommandExecutor {
 
-    private final DBans plugin;
     private static final Pattern IP_PATTERN = Pattern.compile("^(\\d{1,3}\\.){3}\\d{1,3}$");
     private static final Pattern IP_MASK_PATTERN = Pattern.compile("^(\\d{1,3}\\.){3}\\*$");
+    private final DBans plugin;
 
     public BanIpCommand(DBans plugin) {
         this.plugin = plugin;
@@ -58,7 +58,7 @@ public class BanIpCommand implements CommandExecutor {
 
         if (targetServer != null) {
             boolean canUseServer = sender.hasPermission("dbans.server.bypass") ||
-                    sender.hasPermission("dbans.server.banip");
+                                   sender.hasPermission("dbans.server.banip");
             if (!canUseServer) {
                 MessageUtil.send(sender, "no_server_permission", "command", "banip");
                 return true;
@@ -127,8 +127,7 @@ public class BanIpCommand implements CommandExecutor {
             return true;
         }
 
-        if (sender instanceof Player) {
-            Player issuer = (Player) sender;
+        if (sender instanceof Player issuer) {
             if (plugin.getLimitsManager().isOnCooldown(issuer, "banip")) {
                 int remaining = plugin.getLimitsManager().getRemainingCooldown(issuer, "banip");
                 MessageUtil.send(sender, "command_on_cooldown", "command", "banip", "time", String.valueOf(remaining));
@@ -145,37 +144,37 @@ public class BanIpCommand implements CommandExecutor {
 
         // Создаём IP-бан через новый API
         PunishmentCreateRequest request = PunishmentCreateRequest.builder()
-                .target(PlayerIdentity.of(playerUuid != null ? playerUuid : UUID.randomUUID(), playerName != null ? playerName : ipOrMask))
-                .type(PunishmentType.IP_BAN)
-                .reason(PunishmentReason.of(reason))
-                .duration(PunishmentDuration.permanent())
-                .issuer(sender instanceof Player
-                        ? PunishmentIssuer.player(((Player) sender).getUniqueId(), sender.getName())
-                        : PunishmentIssuer.console())
-                .serverName(finalServer)
-                .options(PunishmentOptions.builder()
-                        .silent(silent)
-                        .broadcast(!silent)
-                        .notifyTarget(true)
-                        .build())
-                .build();
+                                                                 .target(PlayerIdentity.of(playerUuid != null ? playerUuid : UUID.randomUUID(), playerName != null ? playerName : ipOrMask))
+                                                                 .type(PunishmentType.IP_BAN)
+                                                                 .reason(PunishmentReason.of(reason))
+                                                                 .duration(PunishmentDuration.permanent())
+                                                                 .issuer(sender instanceof Player
+                                                                                 ? PunishmentIssuer.player(((Player) sender).getUniqueId(), sender.getName())
+                                                                                 : PunishmentIssuer.console())
+                                                                 .serverName(finalServer)
+                                                                 .options(PunishmentOptions.builder()
+                                                                                           .silent(silent)
+                                                                                           .broadcast(!silent)
+                                                                                           .notifyTarget(true)
+                                                                                           .build())
+                                                                 .build();
 
         plugin.getApi().punishments().create(request)
-                .whenComplete((result, ex) -> {
-                    if (ex != null) {
-                        if (ex instanceof PlayerNotFoundException) {
-                            MessageUtil.send(sender, "player_not_found", "target", playerName != null ? playerName : ipOrMask);
-                        } else {
-                            MessageUtil.send(sender, "error_creating_punishment", "error", ex.getMessage());
-                            log.error("Error creating IP ban", ex);
-                        }
-                    } else {
-                        if (sender instanceof Player) {
-                            plugin.getLimitsManager().setCooldown((Player) sender, "banip");
-                        }
-                        log.info("IP {} banned by {}", ipOrMask, sender.getName());
-                    }
-                });
+              .whenComplete((result, ex) -> {
+                  if (ex != null) {
+                      if (ex instanceof PlayerNotFoundException) {
+                          MessageUtil.send(sender, "player_not_found", "target", playerName != null ? playerName : ipOrMask);
+                      } else {
+                          MessageUtil.send(sender, "error_creating_punishment", "error", ex.getMessage());
+                          log.error("Error creating IP ban", ex);
+                      }
+                  } else {
+                      if (sender instanceof Player) {
+                          plugin.getLimitsManager().setCooldown((Player) sender, "banip");
+                      }
+                      log.info("IP {} banned by {}", ipOrMask, sender.getName());
+                  }
+              });
 
         return true;
     }

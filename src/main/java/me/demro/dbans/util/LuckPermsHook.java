@@ -14,6 +14,7 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class LuckPermsHook {
+
     private final LuckPerms luckPerms;
     private final Map<UUID, CachedGroup> groupCache = new ConcurrentHashMap<>();
     private final long cacheTtlMillis = TimeUnit.SECONDS.toMillis(10);
@@ -52,12 +53,7 @@ public class LuckPermsHook {
         groupCache.clear();
     }
 
-    private static class CachedGroup {
-        final String group;
-        final long timestamp;
-        CachedGroup(String group, long timestamp) {
-            this.group = group;
-            this.timestamp = timestamp;
-        }
+    private record CachedGroup(String group, long timestamp) {
+
     }
 }

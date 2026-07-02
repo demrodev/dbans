@@ -12,13 +12,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 public class GeoIpManager {
-    private final DBans plugin;
-    private DatabaseReader reader;
-    private boolean ready = false;
 
+    private final DBans plugin;
     private final ConcurrentHashMap<String, String> locationCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, String> countryCodeCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, String> countryNameCache = new ConcurrentHashMap<>();
+    private DatabaseReader reader;
+    private boolean ready = false;
 
     public GeoIpManager(DBans plugin) {
         this.plugin = plugin;
@@ -36,7 +36,7 @@ public class GeoIpManager {
 
                 File dbFile = new File(geoipDir, "GeoLite2-City.mmdb");
                 boolean needDownload = !dbFile.exists() ||
-                        (System.currentTimeMillis() - dbFile.lastModified() > 7L * 24 * 60 * 60 * 1000);
+                                       (System.currentTimeMillis() - dbFile.lastModified() > 7L * 24 * 60 * 60 * 1000);
 
                 if (needDownload) {
                     log.info("Downloading MaxMind GeoIP2 City database...");

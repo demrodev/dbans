@@ -8,8 +8,8 @@ permanent_word: "навсегда"
 server_name: "survival"
 
 geoip:
-  whitelist: []          # например, ["RU", "US", "Russia", "United States"]
-  blacklist: []          # например, ["CN", "KP", "China"]
+  whitelist: [ ]          # например, ["RU", "US", "Russia", "United States"]
+  blacklist: [ ]          # например, ["CN", "KP", "China"]
   block_message: "%prefix%&cДоступ с вашей страны (%country%) запрещён."
 
 # Synchronization mode: single, sync, sync_static

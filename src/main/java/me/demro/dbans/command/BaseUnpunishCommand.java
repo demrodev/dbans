@@ -2,9 +2,9 @@ package me.demro.dbans.command;
 
 import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
+import me.demro.dbans.util.MessageUtil;
 import me.demro.dlibs.dbans.api.exception.PunishmentNotFoundException;
 import me.demro.dlibs.dbans.api.punishment.*;
-import me.demro.dbans.util.MessageUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
@@ -14,7 +14,6 @@ import org.bukkit.entity.Player;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -27,7 +26,9 @@ public abstract class BaseUnpunishCommand implements CommandExecutor {
     }
 
     protected abstract PunishmentType getType(); // новый тип
+
     protected abstract String getFullPermission();
+
     protected abstract String getOwnPermission();
 
     @Override
@@ -64,8 +65,7 @@ public abstract class BaseUnpunishCommand implements CommandExecutor {
                 return true;
             }
 
-            if (!hasFull && sender instanceof Player) {
-                Player p = (Player) sender;
+            if (!hasFull && sender instanceof Player p) {
                 if (!punishment.targetUuid().equals(p.getUniqueId())) {
                     MessageUtil.send(sender, "cannot_unpunish_others", "type", getType().name().toLowerCase());
                     return true;
@@ -83,19 +83,19 @@ public abstract class BaseUnpunishCommand implements CommandExecutor {
                     PunishmentOptions.defaults()
             );
             plugin.getApi().punishments().revoke(revokeRequest)
-                    .whenComplete((v, ex) -> {
-                        if (ex != null) {
-                            if (ex instanceof PunishmentNotFoundException) {
-                                MessageUtil.send(sender, "punishment_not_found", "id", id);
-                            } else {
-                                MessageUtil.send(sender, "error_revoking_punishment", "error", ex.getMessage());
-                                log.error("Error revoking punishment", ex);
-                            }
-                        } else {
-                            MessageUtil.send(sender, "punishment_revoked", "id", id);
-                            log.info("Punishment {} revoked by {}", id, sender.getName());
-                        }
-                    });
+                  .whenComplete((v, ex) -> {
+                      if (ex != null) {
+                          if (ex instanceof PunishmentNotFoundException) {
+                              MessageUtil.send(sender, "punishment_not_found", "id", id);
+                          } else {
+                              MessageUtil.send(sender, "error_revoking_punishment", "error", ex.getMessage());
+                              log.error("Error revoking punishment", ex);
+                          }
+                      } else {
+                          MessageUtil.send(sender, "punishment_revoked", "id", id);
+                          log.info("Punishment {} revoked by {}", id, sender.getName());
+                      }
+                  });
             return true;
         }
 
@@ -106,8 +106,7 @@ public abstract class BaseUnpunishCommand implements CommandExecutor {
             return true;
         }
 
-        if (!hasFull && sender instanceof Player) {
-            Player p = (Player) sender;
+        if (!hasFull && sender instanceof Player p) {
             if (!target.getUniqueId().equals(p.getUniqueId())) {
                 MessageUtil.send(sender, "cannot_unpunish_others", "type", getType().name().toLowerCase());
                 return true;
@@ -131,11 +130,11 @@ public abstract class BaseUnpunishCommand implements CommandExecutor {
 
         // Найдём ID активного наказания – через find с query
         PunishmentQuery query = PunishmentQuery.builder()
-                .targetUuid(target.getUniqueId())
-                .type(getType())
-                .status(PunishmentStatus.ACTIVE)
-                .limit(1)
-                .build();
+                                               .targetUuid(target.getUniqueId())
+                                               .type(getType())
+                                               .status(PunishmentStatus.ACTIVE)
+                                               .limit(1)
+                                               .build();
         CompletableFuture<List<Punishment>> listFuture = plugin.getApi().punishments().find(query);
         List<Punishment> list = listFuture.join();
         if (list.isEmpty()) {
@@ -155,19 +154,19 @@ public abstract class BaseUnpunishCommand implements CommandExecutor {
                 PunishmentOptions.defaults()
         );
         plugin.getApi().punishments().revoke(revokeRequest)
-                .whenComplete((v, ex) -> {
-                    if (ex != null) {
-                        if (ex instanceof PunishmentNotFoundException) {
-                            MessageUtil.send(sender, "punishment_not_found", "id", punishmentId.value());
-                        } else {
-                            MessageUtil.send(sender, "error_revoking_punishment", "error", ex.getMessage());
-                            log.error("Error revoking punishment", ex);
-                        }
-                    } else {
-                        MessageUtil.send(sender, "punishment_revoked", "id", punishmentId.value());
-                        log.info("Punishment {} revoked by {}", punishmentId.value(), sender.getName());
-                    }
-                });
+              .whenComplete((v, ex) -> {
+                  if (ex != null) {
+                      if (ex instanceof PunishmentNotFoundException) {
+                          MessageUtil.send(sender, "punishment_not_found", "id", punishmentId.value());
+                      } else {
+                          MessageUtil.send(sender, "error_revoking_punishment", "error", ex.getMessage());
+                          log.error("Error revoking punishment", ex);
+                      }
+                  } else {
+                      MessageUtil.send(sender, "punishment_revoked", "id", punishmentId.value());
+                      log.info("Punishment {} revoked by {}", punishmentId.value(), sender.getName());
+                  }
+              });
         return true;
     }
 }

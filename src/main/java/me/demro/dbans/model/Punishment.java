@@ -13,6 +13,9 @@ import java.util.concurrent.ThreadLocalRandom;
 @AllArgsConstructor
 @Builder(toBuilder = true)
 public class Punishment {
+
+    private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    private static final int ID_LENGTH = 5;
     @Builder.Default
     private String id = generateId();
     private UUID playerUuid;
@@ -28,9 +31,6 @@ public class Punishment {
     private Long pardonedAt;
     private String pardonReason;
     private String serverName;
-
-    private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    private static final int ID_LENGTH = 5;
 
     public static String generateId() {
         StringBuilder sb = new StringBuilder(ID_LENGTH);

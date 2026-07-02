@@ -92,7 +92,8 @@ public class LoginListener implements Listener {
         // IP-бан – через старый метод, т.к. в API нет прямого метода для IP-бана
         if (plugin.getDatabase().isIpBanned(ip)) {
             String rawMessage = MessageUtil.getRawMessage("banip_player");
-            if (rawMessage == null) rawMessage = "&c✖ Ваш IP-адрес заблокирован.\nПричина: %reason%\nАдминистратор: %sender%";
+            if (rawMessage == null)
+                rawMessage = "&c✖ Ваш IP-адрес заблокирован.\nПричина: %reason%\nАдминистратор: %sender%";
             rawMessage = rawMessage.replace("%reason%", "IP-бан").replace("%sender%", "Консоль");
             event.disallow(PlayerLoginEvent.Result.KICK_BANNED, MessageUtil.deserializeForKick(rawMessage));
             return;
@@ -108,12 +109,12 @@ public class LoginListener implements Listener {
                 boolean allowed = true;
                 if (!whitelist.isEmpty()) {
                     allowed = whitelist.stream().anyMatch(codeOrName ->
-                            (countryCode != null && codeOrName.equalsIgnoreCase(countryCode)) ||
-                                    (countryName != null && codeOrName.equalsIgnoreCase(countryName)));
+                                                                  (codeOrName.equalsIgnoreCase(countryCode)) ||
+                                                                  (codeOrName.equalsIgnoreCase(countryName)));
                 } else if (!blacklist.isEmpty()) {
                     allowed = !blacklist.stream().anyMatch(codeOrName ->
-                            (countryCode != null && codeOrName.equalsIgnoreCase(countryCode)) ||
-                                    (countryName != null && codeOrName.equalsIgnoreCase(countryName)));
+                                                                   (codeOrName.equalsIgnoreCase(countryCode)) ||
+                                                                   (codeOrName.equalsIgnoreCase(countryName)));
                 }
                 if (!allowed) {
                     String display = (countryCode != null) ? countryCode : (countryName != null ? countryName : "Unknown");
@@ -144,12 +145,11 @@ public class LoginListener implements Listener {
                         plugin.getConfig().getString("permanent_word", "навсегда") :
                         TimeUtil.formatDuration(ban.expiresAt().get().toEpochMilli() - System.currentTimeMillis());
                 rawMessage = rawMessage.replace("%reason%", ban.reason().value())
-                        .replace("%sender%", ban.issuer().name())
-                        .replace("%duration%", duration)
-                        .replace("%server%", ban.serverName())
-                        .replace("%id%", ban.shortId());
+                                       .replace("%sender%", ban.issuer().name())
+                                       .replace("%duration%", duration)
+                                       .replace("%server%", ban.serverName())
+                                       .replace("%id%", ban.shortId());
                 event.disallow(PlayerLoginEvent.Result.KICK_BANNED, MessageUtil.deserializeForKick(rawMessage));
-                return;
             }
         }
     }
@@ -161,11 +161,11 @@ public class LoginListener implements Listener {
                 ? plugin.getConfig().getString("permanent_word", "навсегда")
                 : TimeUtil.formatDuration(mute.expiresAt().get().toEpochMilli() - System.currentTimeMillis());
         MessageUtil.send(player, key,
-                "sender", mute.issuer().name(),
-                "reason", mute.reason().value(),
-                "duration", durationStr,
-                "server", mute.serverName(),
-                "id", mute.shortId());
+                         "sender", mute.issuer().name(),
+                         "reason", mute.reason().value(),
+                         "duration", durationStr,
+                         "server", mute.serverName(),
+                         "id", mute.shortId());
     }
 
     private void checkAndExpirePunishments(Player player) {
@@ -187,10 +187,10 @@ public class LoginListener implements Listener {
         // Варны – через API
         CompletableFuture<List<me.demro.dlibs.dbans.api.punishment.Punishment>> warningsFuture = plugin.getApi().punishments().find(
                 me.demro.dlibs.dbans.api.punishment.PunishmentQuery.builder()
-                        .targetUuid(uuid)
-                        .type(me.demro.dlibs.dbans.api.punishment.PunishmentType.WARNING)
-                        .status(me.demro.dlibs.dbans.api.punishment.PunishmentStatus.ACTIVE)
-                        .build()
+                                                                   .targetUuid(uuid)
+                                                                   .type(me.demro.dlibs.dbans.api.punishment.PunishmentType.WARNING)
+                                                                   .status(me.demro.dlibs.dbans.api.punishment.PunishmentStatus.ACTIVE)
+                                                                   .build()
         );
         List<me.demro.dlibs.dbans.api.punishment.Punishment> warnings = warningsFuture.join();
         for (me.demro.dlibs.dbans.api.punishment.Punishment w : warnings) {
@@ -202,10 +202,10 @@ public class LoginListener implements Listener {
         // Джейлы – через API
         CompletableFuture<List<me.demro.dlibs.dbans.api.punishment.Punishment>> jailsFuture = plugin.getApi().punishments().find(
                 me.demro.dlibs.dbans.api.punishment.PunishmentQuery.builder()
-                        .targetUuid(uuid)
-                        .type(me.demro.dlibs.dbans.api.punishment.PunishmentType.JAIL)
-                        .status(me.demro.dlibs.dbans.api.punishment.PunishmentStatus.ACTIVE)
-                        .build()
+                                                                   .targetUuid(uuid)
+                                                                   .type(me.demro.dlibs.dbans.api.punishment.PunishmentType.JAIL)
+                                                                   .status(me.demro.dlibs.dbans.api.punishment.PunishmentStatus.ACTIVE)
+                                                                   .build()
         );
         List<me.demro.dlibs.dbans.api.punishment.Punishment> jails = jailsFuture.join();
         for (me.demro.dlibs.dbans.api.punishment.Punishment j : jails) {
@@ -221,7 +221,7 @@ public class LoginListener implements Listener {
                 TimeUtil.formatDuration(p.expiresAt().get().toEpochMilli() - p.createdAt().toEpochMilli()) :
                 "навсегда";
         MessageUtil.send(player, "expire_offline_" + typeKey,
-                "id", p.shortId(),
-                "duration", duration);
+                         "id", p.shortId(),
+                         "duration", duration);
     }
 }

@@ -9,6 +9,7 @@ import org.bukkit.command.CommandSender;
 
 @Slf4j
 public class DbanCommand implements CommandExecutor {
+
     private final DBans plugin;
 
     public DbanCommand(DBans plugin) {
