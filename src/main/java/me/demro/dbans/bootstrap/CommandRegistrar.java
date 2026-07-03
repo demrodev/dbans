@@ -33,7 +33,7 @@ public final class CommandRegistrar {
         PluginCommand command = plugin.getCommand(name);
         if (command == null) {
             throw new PluginStartupException(
-                    "Command '%s' is not declared in plugin.yml.".formatted(name));
+                    "Command '%s' is not declared in plugin.yml".formatted(name));
         }
         return command;
     }

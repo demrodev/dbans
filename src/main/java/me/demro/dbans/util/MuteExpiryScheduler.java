@@ -41,7 +41,7 @@ public class MuteExpiryScheduler {
             }
         }
 
-        log.info("Deactivated {} expired mute(s) out of {} active.", expiredCount, activeMutes.size());
+        log.info("Deactivated {} expired mute(s) out of {} active", expiredCount, activeMutes.size());
     }
 
     public void rescheduleAll() {

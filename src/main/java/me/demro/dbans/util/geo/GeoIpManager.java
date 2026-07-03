@@ -42,9 +42,9 @@ public class GeoIpManager {
                     log.info("Downloading MaxMind GeoIP2 City database...");
                     String url = "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-City.mmdb";
                     if (HttpDownloader.downloadFile(url, dbFile)) {
-                        log.info("MaxMind GeoIP database downloaded successfully.");
+                        log.info("MaxMind GeoIP database downloaded successfully");
                     } else {
-                        log.warn("Failed to download GeoIP database. Using existing file (if any).");
+                        log.warn("Failed to download GeoIP database. Using existing file (if any)");
                     }
                 }
 
@@ -57,7 +57,7 @@ public class GeoIpManager {
                         log.error("Failed to load GeoIP database: {}", e.getMessage(), e);
                     }
                 } else {
-                    log.warn("No GeoIP database available. /geoip command will not work.");
+                    log.warn("No GeoIP database available. /geoip command will not work");
                 }
             }
         }.runTaskAsynchronously(plugin);

@@ -72,7 +72,7 @@ public final class DBans extends JavaPlugin {
 
         jailConfigFile = new File(getDataFolder(), "jail.yml");
         jailConfig = JailConfigLoader.loadOrCreateDefault(this, jailConfigFile);
-        log.info("jail.yml loaded.");
+//        log.info("jail.yml loaded.");
 
         jailManager = new JailManager(this);
         luckPermsHook = new LuckPermsHook(this);
@@ -138,7 +138,7 @@ public final class DBans extends JavaPlugin {
     private MuteExpiryScheduler requireScheduler() {
         if (muteExpiryScheduler == null) {
             throw new IllegalStateException(
-                    "Mute expiry scheduler is not available; the plugin has not finished starting or failed to start.");
+                    "Mute expiry scheduler is not available; the plugin has not finished starting or failed to start");
         }
         return muteExpiryScheduler;
     }

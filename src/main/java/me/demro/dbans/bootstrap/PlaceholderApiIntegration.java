@@ -15,6 +15,6 @@ public final class PlaceholderApiIntegration {
             return;
         }
         new DBansExpansion(plugin).register();
-        log.info("Registered PlaceholderAPI placeholders.");
+        log.info("Registered PlaceholderAPI placeholders");
     }
 }

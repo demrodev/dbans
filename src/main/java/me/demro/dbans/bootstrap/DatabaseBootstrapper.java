@@ -19,7 +19,7 @@ public final class DatabaseBootstrapper {
 
         if (!"single".equalsIgnoreCase(mode) && "h2".equalsIgnoreCase(dbType)) {
             throw new PluginStartupException(
-                    "Mode '%s' requires MySQL! H2 is not supported.".formatted(mode));
+                    "Mode '%s' requires MySQL! H2 is not supported".formatted(mode));
         }
 
         DatabaseManager database = "mysql".equalsIgnoreCase(dbType)

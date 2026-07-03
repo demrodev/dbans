@@ -42,7 +42,7 @@ public class JailManager {
         this.plugin = plugin;
         this.citizensEnabled = Bukkit.getPluginManager().getPlugin("Citizens") != null;
         if (!citizensEnabled) {
-            log.warn("Citizens2 not found! Using ArmorStand for jail NPC.");
+            log.warn("Citizens2 not found! Using ArmorStand for jail NPC");
         }
         this.jailEnabled = plugin.getJailConfig().getBoolean("enabled", true);
         this.randomRange = plugin.getJailConfig().getInt("random_range", 500);
@@ -51,9 +51,9 @@ public class JailManager {
             createJailWorld();
             startExpiryChecker();
             refreshActiveJailCache();
-            log.info("Jail system enabled.");
+            log.info("Jail system enabled");
         } else {
-            log.info("Jail system is disabled in jail.yml. No resources will be consumed.");
+            log.info("Jail system is disabled in jail.yml. No resources will be consumed");
         }
     }
 
@@ -305,7 +305,7 @@ public class JailManager {
                 player.teleport(previous);
             } else {
                 player.teleport(player.getWorld().getSpawnLocation());
-                log.warn("Previous location is null for {}, teleported to spawn.", player.getName());
+                log.warn("Previous location is null for {}, teleported to spawn", player.getName());
             }
         } finally {
             teleportAllowed.remove(player.getUniqueId());

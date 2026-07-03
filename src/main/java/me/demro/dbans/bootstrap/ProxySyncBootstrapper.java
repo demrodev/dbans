@@ -21,7 +21,7 @@ public final class ProxySyncBootstrapper {
         ProxySyncManager proxySyncManager = new ProxySyncManager(plugin);
         plugin.getServer().getMessenger().registerOutgoingPluginChannel(plugin, Constants.CHANNEL_NAME);
         plugin.getServer().getMessenger().registerIncomingPluginChannel(plugin, Constants.CHANNEL_NAME, proxySyncManager);
-        log.info("Proxy sync manager registered.");
+        log.info("Proxy sync manager registered");
         return proxySyncManager;
     }
 
