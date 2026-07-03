@@ -30,9 +30,12 @@ public class ProxySyncManager implements PluginMessageListener {
         this.plugin = plugin;
     }
 
+    public static boolean isSyncMode(String mode) {
+        return "sync".equalsIgnoreCase(mode) || "sync_static".equalsIgnoreCase(mode);
+    }
+
     public boolean isSyncEnabled() {
-        String mode = plugin.getMode();
-        return mode.equalsIgnoreCase("sync") || mode.equalsIgnoreCase("sync_static");
+        return isSyncMode(plugin.getMode());
     }
 
     private void sendMessage(SyncMessage msg) {
@@ -191,7 +194,7 @@ public class ProxySyncManager implements PluginMessageListener {
         if (punishment.isActive() && !punishment.isExpired()) {
             applyLocalEffects(punishment);
         } else {
-            removeLocalEffects(punishment);
+            removeLocalEffects(type, punishment);
         }
     }
 
@@ -389,14 +392,14 @@ public class ProxySyncManager implements PluginMessageListener {
         }
     }
 
-    private void removeLocalEffects(@NotNull Punishment punishment) {
+    private void removeLocalEffects(String type, @NotNull Punishment punishment) {
         Player player = Bukkit.getPlayer(punishment.getPlayerUuid());
         if (player == null || !player.isOnline()) return;
 
         switch (punishment.getType()) {
             case MUTE:
                 plugin.cancelMuteExpiry(punishment.getId());
-                if ("punishment_revoke".equals(punishment.getType().name())) {
+                if ("punishment_revoke".equals(type)) {
                     MessageUtil.send(player, "unmute_notify", "sender", punishment.getPardonedBy());
                 }
                 break;
