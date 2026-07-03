@@ -456,7 +456,7 @@ public class MySQLDatabase implements DatabaseManager {
 
     @Override
     public String getIpByPlayerName(String playerName) {
-        String sql = "SELECT ip FROM ip_bans WHERE player_name=?";
+        String sql = "SELECT ip FROM players WHERE LOWER(name)=LOWER(?) ORDER BY last_seen DESC";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, playerName);
