@@ -1,125 +1,77 @@
 package me.demro.dbans;
 
 import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import me.demro.dbans.api.adapter.PunishmentAdapter;
 import me.demro.dbans.api.impl.DBansAPIImpl;
-import me.demro.dbans.command.*;
-import me.demro.dbans.command.tabcomplete.UniversalTabCompleter;
+import me.demro.dbans.bootstrap.*;
 import me.demro.dbans.database.DatabaseManager;
-import me.demro.dbans.database.H2Database;
-import me.demro.dbans.database.MySQLDatabase;
-import me.demro.dbans.listener.ChatListener;
-import me.demro.dbans.listener.JailListener;
-import me.demro.dbans.listener.LoginListener;
 import me.demro.dbans.model.Punishment;
-import me.demro.dbans.model.PunishmentType;
-import me.demro.dbans.placeholder.DBansExpansion;
-import me.demro.dbans.sync.Constants;
 import me.demro.dbans.sync.ProxySyncManager;
 import me.demro.dbans.util.*;
 import me.demro.dbans.util.geo.GeoIpManager;
 import me.demro.dlibs.dbans.api.DBansAPI;
-import me.demro.dlibs.dbans.api.event.EventOrigin;
-import me.demro.dlibs.dbans.api.event.PunishmentExpireEvent;
-import me.demro.dlibs.dbans.api.spi.DBansServiceRegistrar;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
-import java.sql.SQLException;
-import java.time.Instant;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
 @Getter
-@Setter
 public final class DBans extends JavaPlugin {
 
-    private final Map<String, BukkitTask> muteExpiryTasks = new HashMap<>();
+    private static final int METRICS_PLUGIN_ID = 32027;
+
     private DatabaseManager database;
+    private CacheManager cacheManager;
+    private PlayerCache playerCache;
     private LuckPermsHook luckPermsHook;
     private PresetManager presetManager;
     private SelfPunishChecker selfPunishChecker;
     private GeoIpManager geoIpManager;
     private LimitsManager limitsManager;
     private JailManager jailManager;
-    private YamlConfiguration jailConfig;
     private AltAccountManager altAccountManager;
     private WarnManager warnManager;
-    private File jailConfigFile;
     private PunishmentSyncManager punishmentSyncManager;
-    private CacheManager cacheManager;
-    private PlayerCache playerCache;
     private ProxySyncManager proxySyncManager;
-
+    private MuteExpiryScheduler muteExpiryScheduler;
     private DBansAPI api;
 
-    public void addNotification(UUID playerUuid, String messageKey, Map<String, String> placeholders) {
-        database.addNotification(playerUuid, messageKey, placeholders);
-    }
-
-    public List<Map<String, String>> getAndClearNotifications(UUID playerUuid) {
-        return database.getAndClearNotifications(playerUuid);
-    }
-
-    public void clearNotifications(UUID playerUuid) {
-        database.clearNotifications(playerUuid);
-    }
+    private File jailConfigFile;
+    private YamlConfiguration jailConfig;
 
     @Override
     public void onEnable() {
+        try {
+            bootstrap();
+        } catch (PluginStartupException e) {
+            log.error(e.getMessage(), e.getCause());
+            getServer().getPluginManager().disablePlugin(this);
+        }
+    }
+
+    private void bootstrap() {
         saveDefaultConfig();
         reloadConfig();
         MessageUtil.init(this);
 
-        String dbType = getConfig().getString("database.type", "h2");
         String mode = getMode();
-        if (!"single".equalsIgnoreCase(mode) && "h2".equalsIgnoreCase(dbType)) {
-            log.error("Mode '{}' requires MySQL! H2 is not supported. Disabling plugin.", mode);
-            getServer().getPluginManager().disablePlugin(this);
-            return;
-        }
 
-        try {
-            if (dbType.equalsIgnoreCase("mysql")) {
-                database = new MySQLDatabase(this);
-            } else {
-                database = new H2Database(this);
-            }
-            database.init();
-            log.info("Database connected: {}", dbType);
-        } catch (SQLException e) {
-            log.error("Failed to initialize database: {}", e.getMessage(), e);
-            getServer().getPluginManager().disablePlugin(this);
-            return;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
+        database = DatabaseBootstrapper.create(this, mode);
         cacheManager = new CacheManager(this);
-        if (database != null) {
-            database.setCacheManager(cacheManager);
-        }
+        database.setCacheManager(cacheManager);
 
-        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
-            new DBansExpansion(this).register();
-            log.info("PlaceholderAPI expansion registered.");
-        }
+        PlaceholderApiIntegration.tryRegister(this);
 
         jailConfigFile = new File(getDataFolder(), "jail.yml");
-        if (!jailConfigFile.exists()) saveResource("jail.yml", false);
-        jailConfig = YamlConfiguration.loadConfiguration(jailConfigFile);
+        jailConfig = JailConfigLoader.loadOrCreateDefault(this, jailConfigFile);
         log.info("jail.yml loaded.");
 
         jailManager = new JailManager(this);
@@ -131,226 +83,64 @@ public final class DBans extends JavaPlugin {
         altAccountManager = new AltAccountManager(this);
         warnManager = new WarnManager(this);
 
-        this.api = new DBansAPIImpl(this);
-        //noinspection UnstableApiUsage
-        DBansServiceRegistrar.register(this, api);
-        log.info("New dBans API registered and ready.");
+        api = new DBansAPIImpl(this);
+        ApiRegistrar.register(this, api);
 
-        if ("sync".equalsIgnoreCase(mode) || "sync_static".equalsIgnoreCase(mode)) {
+        if (ProxySyncManager.isSyncMode(mode)) {
             punishmentSyncManager = new PunishmentSyncManager(this);
         }
+        proxySyncManager = ProxySyncBootstrapper.start(this);
 
-        if (mode.equalsIgnoreCase("sync") || mode.equalsIgnoreCase("sync_static")) {
-            proxySyncManager = new ProxySyncManager(this);
-            getServer().getMessenger().registerOutgoingPluginChannel(this, Constants.CHANNEL_NAME);
-            getServer().getMessenger().registerIncomingPluginChannel(this, Constants.CHANNEL_NAME, proxySyncManager);
-            log.info("✅ Proxy sync manager registered.");
-        } else {
-            log.info("ℹ️ Proxy sync disabled (mode={})", mode);
-        }
+        muteExpiryScheduler = new MuteExpiryScheduler(this, proxySyncManager);
+        muteExpiryScheduler.deactivateExpiredMutes();
 
-        checkAndDeactivateExpiredMutes();
+        CommandRegistrar.register(this);
+        ListenerRegistrar.register(this);
 
-        getCommand("ban").setExecutor(new BanCommand(this));
-        getCommand("tempban").setExecutor(new TempBanCommand(this));
-        getCommand("unban").setExecutor(new UnbanCommand(this));
-        getCommand("mute").setExecutor(new MuteCommand(this));
-        getCommand("tempmute").setExecutor(new TempMuteCommand(this));
-        getCommand("unmute").setExecutor(new UnmuteCommand(this));
-        getCommand("kick").setExecutor(new KickCommand(this));
-        getCommand("banip").setExecutor(new BanIpCommand(this));
-        getCommand("unbanip").setExecutor(new UnbanIpCommand(this));
-        getCommand("history").setExecutor(new HistoryCommand(this));
-        getCommand("droppunish").setExecutor(new DropPunishCommand(this));
-        getCommand("inspect").setExecutor(new InspectCommand(this));
-        getCommand("altreason").setExecutor(new AltReasonCommand(this));
-        getCommand("altduration").setExecutor(new AltDurationCommand(this));
-        getCommand("getuuid").setExecutor(new GetUuidCommand());
-        getCommand("playerinfo").setExecutor(new PlayerInfoCommand(this));
-        getCommand("pstat").setExecutor(new PStatCommand(this));
-        getCommand("punlist").setExecutor(new PunListCommand(this));
-        getCommand("presetlist").setExecutor(new PresetListCommand(this));
-        getCommand("dban").setExecutor(new DbanCommand(this));
-        getCommand("geoip").setExecutor(new GeoIpCommand(this));
-        getCommand("twaccs").setExecutor(new TwaccsCommand(this));
-        getCommand("bantwaccs").setExecutor(new BantwaccsCommand(this));
-        getCommand("warn").setExecutor(new WarnCommand(this));
-        getCommand("unwarn").setExecutor(new UnwarnCommand(this));
-        getCommand("warnlist").setExecutor(new WarnListCommand(this));
-        if (getConfig().getBoolean("jail.enabled", true)) {
-            getCommand("jail").setExecutor(new JailCommand(this));
-            getCommand("unjail").setExecutor(new UnjailCommand(this));
-        }
+        muteExpiryScheduler.rescheduleAll();
 
-        getServer().getPluginManager().registerEvents(new LoginListener(this), this);
-        getServer().getPluginManager().registerEvents(new ChatListener(this), this);
-        if (getConfig().getBoolean("jail.enabled", true)) {
-            getServer().getPluginManager().registerEvents(new JailListener(this), this);
-        }
-
-        UniversalTabCompleter universalTabCompleter = new UniversalTabCompleter(this);
-        for (String cmd : new String[]{"ban", "tempban", "mute", "tempmute", "kick", "unban", "unmute",
-                                       "banip", "unbanip", "history", "droppunish", "altreason", "altduration",
-                                       "getuuid", "playerinfo", "pstat", "inspect", "punlist", "presetlist", "dban",
-                                       "geoip",
-                                       "jail", "unjail", "warn", "unwarn", "warnlist", "twaccs", "bantwaccs"}) {
-            getCommand(cmd).setTabCompleter(universalTabCompleter);
-        }
-
-        rescheduleAllMutes();
-
-        log.info("DBans v{} by demrodev enabled", getPluginMeta().getVersion());
-
-        int pluginId = 32027;
-        new Metrics(this, pluginId);
+        //noinspection UnstableApiUsage
+        log.info("Version running: {}", getPluginMeta().getVersion());
+        new Metrics(this, METRICS_PLUGIN_ID);
 
         playerCache = new PlayerCache();
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            playerCache.update(p);
-        }
+        Bukkit.getOnlinePlayers().forEach(playerCache::update);
     }
 
     @Override
     public void onDisable() {
-        for (BukkitTask task : muteExpiryTasks.values()) {
-            task.cancel();
+        if (muteExpiryScheduler != null) {
+            muteExpiryScheduler.cancelAll();
         }
-        muteExpiryTasks.clear();
 
-        if (proxySyncManager != null) {
-            getServer().getMessenger().unregisterOutgoingPluginChannel(this, Constants.CHANNEL_NAME);
-            getServer().getMessenger().unregisterIncomingPluginChannel(this, Constants.CHANNEL_NAME, proxySyncManager);
-            proxySyncManager = null;
-        }
+        ProxySyncBootstrapper.stop(this, proxySyncManager);
+        proxySyncManager = null;
 
         if (api != null) {
-            //noinspection UnstableApiUsage
-            DBansServiceRegistrar.unregister(api);
+            ApiRegistrar.unregister(api);
             api = null;
         }
 
         if (database != null) {
             database.close();
         }
-        log.info("DBans disabled");
-    }
-
-    private void checkAndDeactivateExpiredMutes() {
-        List<Punishment> activeMutes = database.getAllActivePunishmentsByType(PunishmentType.MUTE);
-        long now = System.currentTimeMillis();
-        boolean anyExpired = false;
-
-        for (Punishment mute : activeMutes) {
-            if (mute.getEndTime() != null && mute.getEndTime() <= now) {
-                mute.setActive(false);
-                database.updatePunishment(mute);
-                log.info("🔁 Deactivated expired mute: {} for {}", mute.getId(), mute.getPlayerName());
-                anyExpired = true;
-
-                cacheManager.invalidateMuteCache(mute.getPlayerUuid());
-
-                try {
-                    PunishmentExpireEvent event = new PunishmentExpireEvent(
-                            new PunishmentAdapter(mute),
-                            EventOrigin.INTERNAL,
-                            Instant.now(),
-                            false
-                    );
-                    Bukkit.getPluginManager().callEvent(event);
-                } catch (Exception e) {
-                    log.warn("Failed to call new PunishmentExpireEvent: {}", e.getMessage());
-                }
-
-                if (proxySyncManager != null) {
-                    proxySyncManager.sendPunishmentExpire(mute);
-                }
-
-                Player p = Bukkit.getPlayer(mute.getPlayerUuid());
-                if (p != null && p.isOnline()) {
-                    MessageUtil.send(p, "expire_mute", "id", mute.getId());
-                }
-            }
-        }
-
-        if (anyExpired) {
-            log.info("✅ Проверка истекших мутов завершена. Некоторые муты были деактивированы.");
-        } else {
-            log.info("✅ Истекших мутов не обнаружено.");
-        }
     }
 
     public void scheduleMuteExpiry(@NotNull Punishment mute) {
-        if (mute.getEndTime() == null) return;
-        long delay = mute.getEndTime() - System.currentTimeMillis();
-        if (delay <= 0) {
-            mute.setActive(false);
-            database.updatePunishment(mute);
-            cacheManager.invalidateMuteCache(mute.getPlayerUuid());
-
-            Player p = Bukkit.getPlayer(mute.getPlayerUuid());
-            if (p != null && p.isOnline()) {
-                MessageUtil.send(p, "expire_mute", "id", mute.getId());
-            }
-            try {
-                PunishmentExpireEvent event = new PunishmentExpireEvent(
-                        new PunishmentAdapter(mute),
-                        EventOrigin.INTERNAL,
-                        Instant.now(),
-                        false
-                );
-                Bukkit.getPluginManager().callEvent(event);
-            } catch (Exception e) {
-                log.warn("Failed to call new PunishmentExpireEvent: {}", e.getMessage());
-            }
-            if (proxySyncManager != null) {
-                proxySyncManager.sendPunishmentExpire(mute);
-            }
-            return;
-        }
-        BukkitTask task = getServer().getScheduler().runTaskLater(this, () -> {
-            mute.setActive(false);
-            database.updatePunishment(mute);
-            cacheManager.invalidateMuteCache(mute.getPlayerUuid());
-
-            Player p = Bukkit.getPlayer(mute.getPlayerUuid());
-            if (p != null && p.isOnline()) {
-                MessageUtil.send(p, "expire_mute", "id", mute.getId());
-            }
-            muteExpiryTasks.remove(mute.getId());
-            try {
-                PunishmentExpireEvent event = new PunishmentExpireEvent(
-                        new PunishmentAdapter(mute),
-                        EventOrigin.INTERNAL,
-                        Instant.now(),
-                        false
-                );
-                Bukkit.getPluginManager().callEvent(event);
-            } catch (Exception e) {
-                log.warn("Failed to call new PunishmentExpireEvent: {}", e.getMessage());
-            }
-            if (proxySyncManager != null) {
-                proxySyncManager.sendPunishmentExpire(mute);
-            }
-        }, delay / 50);
-        muteExpiryTasks.put(mute.getId(), task);
+        requireScheduler().schedule(mute);
     }
 
     public void cancelMuteExpiry(String punishmentId) {
-        BukkitTask task = muteExpiryTasks.remove(punishmentId);
-        if (task != null) task.cancel();
+        requireScheduler().cancel(punishmentId);
     }
 
-    private void rescheduleAllMutes() {
-        for (BukkitTask task : muteExpiryTasks.values()) {
-            task.cancel();
+    @Contract(pure = true)
+    private MuteExpiryScheduler requireScheduler() {
+        if (muteExpiryScheduler == null) {
+            throw new IllegalStateException(
+                    "Mute expiry scheduler is not available; the plugin has not finished starting or failed to start.");
         }
-        muteExpiryTasks.clear();
-        List<Punishment> activeMutes = database.getAllActivePunishmentsByType(PunishmentType.MUTE);
-        for (Punishment mute : activeMutes) {
-            if (mute.getEndTime() != null && mute.isActive() && mute.getEndTime() > System.currentTimeMillis()) {
-                scheduleMuteExpiry(mute);
-            }
-        }
+        return muteExpiryScheduler;
     }
 
     @Contract(" -> !null")
@@ -367,10 +157,18 @@ public final class DBans extends JavaPlugin {
         if (jailConfigFile == null) {
             jailConfigFile = new File(getDataFolder(), "jail.yml");
         }
-        jailConfig = YamlConfiguration.loadConfiguration(jailConfigFile);
+        jailConfig = JailConfigLoader.loadOrCreateDefault(this, jailConfigFile);
         if (jailManager != null) {
             jailManager.reload();
         }
         log.info("jail.yml reloaded");
+    }
+
+    public void addNotification(UUID playerUuid, String messageKey, Map<String, String> placeholders) {
+        database.addNotification(playerUuid, messageKey, placeholders);
+    }
+
+    public List<Map<String, String>> getAndClearNotifications(UUID playerUuid) {
+        return database.getAndClearNotifications(playerUuid);
     }
 }
