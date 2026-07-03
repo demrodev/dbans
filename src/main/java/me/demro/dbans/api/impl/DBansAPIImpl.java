@@ -1,7 +1,6 @@
 package me.demro.dbans.api.impl;
 
 import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import me.demro.dlibs.dbans.api.DBansAPI;
 import me.demro.dlibs.dbans.api.alt.AltService;
@@ -14,7 +13,6 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Main implementation of the new dBans API.
  */
-@Slf4j
 @Getter
 public class DBansAPIImpl implements DBansAPI {
 
@@ -30,7 +28,6 @@ public class DBansAPIImpl implements DBansAPI {
         this.players = new PlayerServiceImpl(plugin);
         this.permissions = new PermissionServiceImpl(plugin);
         this.alts = new AltServiceImpl(plugin);
-        log.info("New DBans API initialized and ready");
     }
 
     @Override
@@ -58,6 +55,7 @@ public class DBansAPIImpl implements DBansAPI {
         return plugin.isEnabled();
     }
 
+    @SuppressWarnings("UnstableApiUsage")
     @Override
     public @NotNull String version() {
         return plugin.getPluginMeta().getVersion();

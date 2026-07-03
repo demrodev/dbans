@@ -14,11 +14,9 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Adapter that implements the new API's {@link me.demro.dlibs.dbans.api.punishment.Punishment} interface
- * for any of the three internal punishment models.
- */
-public final class NewPunishmentAdapter implements me.demro.dlibs.dbans.api.punishment.Punishment {
+public final class PunishmentAdapter implements me.demro.dlibs.dbans.api.punishment.Punishment {
+
+    public static final UUID CONSOLE_UUID = UUID.nameUUIDFromBytes("CONSOLE".getBytes());
 
     private final String id;
     private final UUID targetUuid;
@@ -32,77 +30,60 @@ public final class NewPunishmentAdapter implements me.demro.dlibs.dbans.api.puni
     private final boolean active;
     private final String serverName;
 
-    /**
-     * Constructs an adapter from a standard {@link Punishment}.
-     */
-    public NewPunishmentAdapter(@NotNull Punishment p) {
-        this.id = p.getId();
-        this.targetUuid = p.getPlayerUuid();
-        this.targetName = p.getPlayerName();
-        this.issuerUuid = p.getIssuerUuid();
-        this.issuerName = p.getIssuerName();
-        this.type = mapType(p.getType());
-        this.reason = p.getReason();
-        this.startTime = p.getStartTime();
-        this.endTime = p.getEndTime();
-        this.active = p.isActive();
-        this.serverName = p.getServerName();
+    public PunishmentAdapter(@NotNull Punishment punishment) {
+        this.id = punishment.getId();
+        this.targetUuid = punishment.getPlayerUuid();
+        this.targetName = punishment.getPlayerName();
+        this.issuerUuid = punishment.getIssuerUuid();
+        this.issuerName = punishment.getIssuerName();
+        this.type = mapType(punishment.getType());
+        this.reason = punishment.getReason();
+        this.startTime = punishment.getStartTime();
+        this.endTime = punishment.getEndTime();
+        this.active = punishment.isActive();
+        this.serverName = punishment.getServerName();
     }
 
-    /**
-     * Constructs an adapter from a {@link JailPunishment}.
-     */
-    public NewPunishmentAdapter(@NotNull JailPunishment j) {
-        this.id = j.getId();
-        this.targetUuid = j.getPlayerUuid();
-        this.targetName = j.getPlayerName();
-        this.issuerUuid = j.getIssuerUuid();
-        this.issuerName = j.getIssuerName();
+    public PunishmentAdapter(@NotNull JailPunishment jail) {
+        this.id = jail.getId();
+        this.targetUuid = jail.getPlayerUuid();
+        this.targetName = jail.getPlayerName();
+        this.issuerUuid = jail.getIssuerUuid();
+        this.issuerName = jail.getIssuerName();
         this.type = me.demro.dlibs.dbans.api.punishment.PunishmentType.JAIL;
-        this.reason = j.getReason();
-        this.startTime = j.getStartTime();
-        this.endTime = j.getEndTime();
-        this.active = j.isActive();
-        this.serverName = j.getServerName();
+        this.reason = jail.getReason();
+        this.startTime = jail.getStartTime();
+        this.endTime = jail.getEndTime();
+        this.active = jail.isActive();
+        this.serverName = jail.getServerName();
     }
 
-    /**
-     * Constructs an adapter from a {@link Warning}.
-     */
-    public NewPunishmentAdapter(@NotNull Warning w) {
-        this.id = w.getId();
-        this.targetUuid = w.getPlayerUuid();
-        this.targetName = w.getPlayerName();
-        this.issuerUuid = w.getIssuerUuid();
-        this.issuerName = w.getIssuerName();
+    public PunishmentAdapter(@NotNull Warning warning) {
+        this.id = warning.getId();
+        this.targetUuid = warning.getPlayerUuid();
+        this.targetName = warning.getPlayerName();
+        this.issuerUuid = warning.getIssuerUuid();
+        this.issuerName = warning.getIssuerName();
         this.type = me.demro.dlibs.dbans.api.punishment.PunishmentType.WARNING;
-        this.reason = w.getReason();
-        this.startTime = w.getStartTime();
-        this.endTime = w.getEndTime();
-        this.active = w.isActive();
-        this.serverName = w.getServerName();
+        this.reason = warning.getReason();
+        this.startTime = warning.getStartTime();
+        this.endTime = warning.getEndTime();
+        this.active = warning.isActive();
+        this.serverName = warning.getServerName();
     }
 
     @Contract(pure = true)
     private static me.demro.dlibs.dbans.api.punishment.PunishmentType mapType(
             me.demro.dbans.model.@NotNull PunishmentType oldType
     ) {
-        switch (oldType) {
-            case BAN:
-                return me.demro.dlibs.dbans.api.punishment.PunishmentType.BAN;
-            case MUTE:
-                return me.demro.dlibs.dbans.api.punishment.PunishmentType.MUTE;
-            case KICK:
-                return me.demro.dlibs.dbans.api.punishment.PunishmentType.KICK;
-            case IPBAN:
-                return me.demro.dlibs.dbans.api.punishment.PunishmentType.IP_BAN;
-            case JAIL:
-                return me.demro.dlibs.dbans.api.punishment.PunishmentType.JAIL;
-            case WARNING:
-                return me.demro.dlibs.dbans.api.punishment.PunishmentType.WARNING;
-            default:
-                throw new IllegalArgumentException("Unknown type: " + oldType);
-        }
+        return switch (oldType) {
+            case BAN -> me.demro.dlibs.dbans.api.punishment.PunishmentType.BAN;
+            case MUTE -> me.demro.dlibs.dbans.api.punishment.PunishmentType.MUTE;
+            case KICK -> me.demro.dlibs.dbans.api.punishment.PunishmentType.KICK;
+            case IPBAN -> me.demro.dlibs.dbans.api.punishment.PunishmentType.IP_BAN;
+            case JAIL -> me.demro.dlibs.dbans.api.punishment.PunishmentType.JAIL;
+            case WARNING -> me.demro.dlibs.dbans.api.punishment.PunishmentType.WARNING;
+        };
     }
 
     @Contract(" -> new")
@@ -131,7 +112,7 @@ public final class NewPunishmentAdapter implements me.demro.dlibs.dbans.api.puni
 
     @Override
     public @NotNull PunishmentIssuer issuer() {
-        if (issuerUuid.equals(UUID.nameUUIDFromBytes("CONSOLE".getBytes()))) {
+        if (CONSOLE_UUID.equals(issuerUuid)) {
             return PunishmentIssuer.console();
         }
         return PunishmentIssuer.player(issuerUuid, issuerName);

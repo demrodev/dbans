@@ -3,7 +3,7 @@ package me.demro.dbans;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import me.demro.dbans.api.adapter.NewPunishmentAdapter;
+import me.demro.dbans.api.adapter.PunishmentAdapter;
 import me.demro.dbans.api.impl.DBansAPIImpl;
 import me.demro.dbans.command.*;
 import me.demro.dbans.command.tabcomplete.UniversalTabCompleter;
@@ -251,7 +251,7 @@ public final class DBans extends JavaPlugin {
 
                 try {
                     PunishmentExpireEvent event = new PunishmentExpireEvent(
-                            new NewPunishmentAdapter(mute),
+                            new PunishmentAdapter(mute),
                             EventOrigin.INTERNAL,
                             Instant.now(),
                             false
@@ -293,7 +293,7 @@ public final class DBans extends JavaPlugin {
             }
             try {
                 PunishmentExpireEvent event = new PunishmentExpireEvent(
-                        new NewPunishmentAdapter(mute),
+                        new PunishmentAdapter(mute),
                         EventOrigin.INTERNAL,
                         Instant.now(),
                         false
@@ -319,7 +319,7 @@ public final class DBans extends JavaPlugin {
             muteExpiryTasks.remove(mute.getId());
             try {
                 PunishmentExpireEvent event = new PunishmentExpireEvent(
-                        new NewPunishmentAdapter(mute),
+                        new PunishmentAdapter(mute),
                         EventOrigin.INTERNAL,
                         Instant.now(),
                         false
