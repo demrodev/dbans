@@ -7,176 +7,242 @@ import me.demro.dlibs.dbans.api.exception.PlayerNotFoundException;
 import me.demro.dlibs.dbans.api.player.PlayerIdentity;
 import me.demro.dlibs.dbans.api.punishment.*;
 import org.bukkit.Bukkit;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
-import java.util.regex.Pattern;
+import java.util.Optional;
+import java.util.concurrent.CompletionException;
+
+import static java.util.Objects.requireNonNull;
 
 @Slf4j
 public class BanIpCommand implements CommandExecutor {
 
-    private static final Pattern IP_PATTERN = Pattern.compile("^(\\d{1,3}\\.){3}\\d{1,3}$");
-    private static final Pattern IP_MASK_PATTERN = Pattern.compile("^(\\d{1,3}\\.){3}\\*$");
+    private static final String COMMAND_NAME = "banip";
+    private static final String PERMISSION = "dbans.banip";
+
     private final DBans plugin;
+    private final BanIpTargetResolver targetResolver;
+    private final BanIpEligibilityService eligibilityService;
 
     public BanIpCommand(DBans plugin) {
         this.plugin = plugin;
+        this.targetResolver = new BanIpTargetResolver(plugin);
+        this.eligibilityService = new BanIpEligibilityService(plugin);
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, @NotNull Command cmd, @NotNull String label, String[] args) {
-        if (!sender.hasPermission("dbans.banip")) {
-            MessageUtil.send(sender, "no_permission");
-            return true;
+    public boolean onCommand(@NotNull CommandSender sender,
+                             @NotNull Command command,
+                             @NotNull String label,
+                             String @NotNull [] args
+    ) {
+        BasePunishCommand.ParsedArgs parsed = BasePunishCommand.parseArgs(args);
+
+        if (!isInitiallyBlocked(sender, parsed)) {
+            List<String> filteredArgs = parsed.filteredArgs();
+            String reason = filteredArgs.size() > 1
+                    ? String.join(" ", filteredArgs.subList(1, filteredArgs.size()))
+                    : "Не указана";
+
+            targetResolver.resolve(sender, filteredArgs.getFirst())
+                          .ifPresent(target -> executeBan(new BanExecution(
+                                  sender,
+                                  parsed.targetServer(),
+                                  parsed.silent(),
+                                  target,
+                                  reason
+                          )));
         }
-
-        boolean silent = false;
-        String targetServer = null;
-        List<String> filteredArgs = new ArrayList<>();
-
-        for (String arg : args) {
-            if (arg.equalsIgnoreCase("-s")) {
-                silent = true;
-            } else if (arg.toLowerCase().startsWith("server:")) {
-                targetServer = arg.substring(7);
-                if (targetServer.isEmpty()) targetServer = null;
-            } else {
-                filteredArgs.add(arg);
-            }
-        }
-
-        if (filteredArgs.isEmpty()) {
-            MessageUtil.send(sender, "usage_banip");
-            return true;
-        }
-
-        if (targetServer != null) {
-            boolean canUseServer = sender.hasPermission("dbans.server.bypass") ||
-                                   sender.hasPermission("dbans.server.banip");
-            if (!canUseServer) {
-                MessageUtil.send(sender, "no_server_permission", "command", "banip");
-                return true;
-            }
-        }
-
-        String targetInput = filteredArgs.get(0);
-        String reason = filteredArgs.size() >= 2 ? String.join(" ", filteredArgs.subList(1, filteredArgs.size())) : "Не указана";
-        String ipOrMask;
-        OfflinePlayer target = null;
-        UUID playerUuid = null;
-        String playerName;
-
-        Player onlineTarget = Bukkit.getPlayer(targetInput);
-        if (onlineTarget != null) {
-            target = onlineTarget;
-            ipOrMask = onlineTarget.getAddress().getAddress().getHostAddress();
-            playerName = onlineTarget.getName();
-            playerUuid = onlineTarget.getUniqueId();
-            // Проверка через новый API
-            if (plugin.getApi().permissions().canPunish(
-                    sender instanceof Player ? ((Player) sender).getUniqueId() : UUID.nameUUIDFromBytes("CONSOLE".getBytes()),
-                    playerUuid
-            ).join() == false) {
-                MessageUtil.send(sender, "cannot_punish_higher_priority", "target", playerName);
-                return true;
-            }
-            if (plugin.getApi().permissions().hasImmunity(playerUuid, PunishmentType.IP_BAN).join()) {
-                MessageUtil.send(sender, "target_immune_permission", "target", playerName);
-                return true;
-            }
-            if (plugin.getSelfPunishChecker().isSelfPunish(sender, playerName)) return true;
-        } else if (IP_PATTERN.matcher(targetInput).matches() || IP_MASK_PATTERN.matcher(targetInput).matches()) {
-            playerName = null;
-            ipOrMask = targetInput;
-        } else {
-            OfflinePlayer offlineTarget = Bukkit.getOfflinePlayer(targetInput);
-            if (!offlineTarget.hasPlayedBefore()) {
-                MessageUtil.send(sender, "player_not_found", "target", targetInput);
-                return true;
-            }
-            target = offlineTarget;
-            playerName = offlineTarget.getName();
-            playerUuid = offlineTarget.getUniqueId();
-            ipOrMask = plugin.getDatabase().getIpByPlayerName(playerName);
-            if (ipOrMask == null) {
-                MessageUtil.send(sender, "ip_not_found_for_player", "target", playerName);
-                return true;
-            }
-            if (plugin.getApi().permissions().canPunish(
-                    sender instanceof Player ? ((Player) sender).getUniqueId() : UUID.nameUUIDFromBytes("CONSOLE".getBytes()),
-                    playerUuid
-            ).join() == false) {
-                MessageUtil.send(sender, "cannot_punish_higher_priority", "target", playerName);
-                return true;
-            }
-            if (plugin.getApi().permissions().hasImmunity(playerUuid, PunishmentType.IP_BAN).join()) {
-                MessageUtil.send(sender, "target_immune_permission", "target", playerName);
-                return true;
-            }
-            if (plugin.getSelfPunishChecker().isSelfPunish(sender, playerName)) return true;
-        }
-
-        if (plugin.getDatabase().isIpBanned(ipOrMask)) {
-            MessageUtil.send(sender, "ip_banned_already", "target", playerName != null ? playerName : ipOrMask);
-            return true;
-        }
-
-        if (sender instanceof Player issuer) {
-            if (plugin.getLimitsManager().isOnCooldown(issuer, "banip")) {
-                int remaining = plugin.getLimitsManager().getRemainingCooldown(issuer, "banip");
-                MessageUtil.send(sender, "command_on_cooldown", "command", "banip", "time", String.valueOf(remaining));
-                return true;
-            }
-        }
-
-        String finalServer = (targetServer != null && !targetServer.isEmpty()) ? targetServer : plugin.getServerName();
-        String mode = plugin.getMode();
-        if (!mode.equalsIgnoreCase("sync") && !mode.equalsIgnoreCase("sync_static") && targetServer != null) {
-            MessageUtil.send(sender, "server_argument_not_supported");
-            return true;
-        }
-
-        // Создаём IP-бан через новый API
-        PunishmentCreateRequest request = PunishmentCreateRequest.builder()
-                                                                 .target(PlayerIdentity.of(playerUuid != null ? playerUuid : UUID.randomUUID(), playerName != null ? playerName : ipOrMask))
-                                                                 .type(PunishmentType.IP_BAN)
-                                                                 .reason(PunishmentReason.of(reason))
-                                                                 .duration(PunishmentDuration.permanent())
-                                                                 .issuer(sender instanceof Player
-                                                                                 ? PunishmentIssuer.player(((Player) sender).getUniqueId(), sender.getName())
-                                                                                 : PunishmentIssuer.console())
-                                                                 .serverName(finalServer)
-                                                                 .options(PunishmentOptions.builder()
-                                                                                           .silent(silent)
-                                                                                           .broadcast(!silent)
-                                                                                           .notifyTarget(true)
-                                                                                           .build())
-                                                                 .build();
-
-        plugin.getApi().punishments().create(request)
-              .whenComplete((result, ex) -> {
-                  if (ex != null) {
-                      if (ex instanceof PlayerNotFoundException) {
-                          MessageUtil.send(sender, "player_not_found", "target", playerName != null ? playerName : ipOrMask);
-                      } else {
-                          MessageUtil.send(sender, "error_creating_punishment", "error", ex.getMessage());
-                          log.error("Error creating IP ban", ex);
-                      }
-                  } else {
-                      if (sender instanceof Player) {
-                          plugin.getLimitsManager().setCooldown((Player) sender, "banip");
-                      }
-                      log.info("IP {} banned by {}", ipOrMask, sender.getName());
-                  }
-              });
-
         return true;
     }
+
+    private boolean isInitiallyBlocked(@NotNull CommandSender sender,
+                                       @NotNull BasePunishCommand.ParsedArgs parsed
+    ) {
+        boolean blocked;
+        if (!sender.hasPermission(PERMISSION)) {
+            MessageUtil.send(sender, "no_permission");
+            blocked = true;
+        } else if (parsed.filteredArgs().isEmpty()) {
+            MessageUtil.send(sender, "usage_banip");
+            blocked = true;
+        } else if (parsed.targetServer() != null && !hasServerPermission(sender)) {
+            MessageUtil.send(sender, "no_server_permission", "command", COMMAND_NAME);
+            blocked = true;
+        } else {
+            blocked = false;
+        }
+        return blocked;
+    }
+
+    private void executeBan(@NotNull BanExecution execution) {
+        CommandSender sender = execution.sender();
+        BanIpTarget target = execution.target();
+        String targetServer = execution.targetServer();
+
+        if (plugin.getDatabase().isIpBanned(target.ipOrMask())) {
+            MessageUtil.send(sender, "ip_banned_already", "target", target.displayName());
+        } else if (isOnCooldown(sender)) {
+            log.debug("IP ban command rejected because {} is on cooldown", sender.getName());
+        } else if (!isServerArgumentSupported(targetServer)) {
+            MessageUtil.send(sender, "server_argument_not_supported");
+        } else if (target.representsPlayer()
+                   && plugin.getSelfPunishChecker().isSelfPunish(sender, target.displayName())) {
+            log.debug("IP ban command rejected because {} targeted themselves", sender.getName());
+        } else {
+            eligibilityService.check(sender, target)
+                              .whenComplete((eligibility, throwable) -> runOnMainThread(() -> {
+                                  if (throwable != null) {
+                                      handleEligibilityFailure(execution.sender(), throwable);
+                                  } else {
+                                      handleEligibility(execution, requireNonNull(eligibility, "eligibility"));
+                                  }
+                              }));
+        }
+    }
+
+    private void handleEligibility(@NotNull BanExecution execution,
+                                   @NotNull BanIpEligibility eligibility
+    ) {
+        switch (eligibility) {
+            case ALLOWED -> createBan(execution);
+            case HIGHER_PRIORITY -> MessageUtil.send(
+                    execution.sender(),
+                    "cannot_punish_higher_priority",
+                    "target",
+                    execution.target().displayName()
+            );
+            case IMMUNE -> MessageUtil.send(
+                    execution.sender(),
+                    "target_immune_permission",
+                    "target",
+                    execution.target().displayName()
+            );
+        }
+    }
+
+    private void createBan(@NotNull BanExecution execution) {
+        CommandSender sender = execution.sender();
+        String targetServer = execution.targetServer();
+        if (sender instanceof Player player) {
+            plugin.getLimitsManager().setCooldown(player, COMMAND_NAME);
+        }
+
+        String finalServer = targetServer != null ? targetServer : plugin.getServerName();
+        plugin.getApi().punishments()
+              .create(buildRequest(execution, finalServer))
+              .whenComplete((result, throwable) -> runOnMainThread(
+                      () -> handleResult(execution, throwable)
+              ));
+    }
+
+    @Contract("_, _ -> new")
+    private @NotNull PunishmentCreateRequest buildRequest(@NotNull BanExecution execution,
+                                                          @NotNull String finalServer
+    ) {
+        CommandSender sender = execution.sender();
+        BanIpTarget target = execution.target();
+        return PunishmentCreateRequest.builder()
+                                      .target(PlayerIdentity.of(target.resolvedUuid(), target.displayName()))
+                                      .type(PunishmentType.IP_BAN)
+                                      .reason(PunishmentReason.of(execution.reason()))
+                                      .duration(PunishmentDuration.permanent())
+                                      .issuer(sender instanceof Player player
+                                                      ? PunishmentIssuer.player(player.getUniqueId(), player.getName())
+                                                      : PunishmentIssuer.console())
+                                      .serverName(finalServer)
+                                      .options(PunishmentOptions.builder()
+                                                                .silent(execution.silent())
+                                                                .broadcast(!execution.silent())
+                                                                .notifyTarget(target.representsPlayer())
+                                                                .build())
+                                      .build();
+    }
+
+    private void handleResult(@NotNull BanExecution execution,
+                              @Nullable Throwable throwable
+    ) {
+        CommandSender sender = execution.sender();
+        BanIpTarget target = execution.target();
+        if (throwable == null) {
+            log.info("IP {} banned by {}", target.ipOrMask(), sender.getName());
+        } else {
+            Throwable cause = unwrap(throwable);
+            if (cause instanceof PlayerNotFoundException) {
+                MessageUtil.send(sender, "player_not_found", "target", target.displayName());
+            } else {
+                MessageUtil.send(sender, "error_creating_punishment", "error", exceptionMessage(cause));
+                log.error("Error creating IP ban for {}", target.ipOrMask(), cause);
+            }
+        }
+    }
+
+    private void handleEligibilityFailure(@NotNull CommandSender sender,
+                                          @NotNull Throwable throwable
+    ) {
+        Throwable cause = unwrap(throwable);
+        MessageUtil.send(sender, "error_creating_punishment", "error", exceptionMessage(cause));
+        log.error("Error checking IP ban eligibility", cause);
+    }
+
+    private @NotNull String exceptionMessage(@NotNull Throwable throwable) {
+        return Optional.ofNullable(throwable.getMessage())
+                       .orElse(throwable.getClass().getSimpleName());
+    }
+
+    private @NotNull Throwable unwrap(@NotNull Throwable throwable) {
+        Throwable cause = throwable;
+        while (cause instanceof CompletionException && cause.getCause() != null) {
+            cause = cause.getCause();
+        }
+        return cause;
+    }
+
+    private void runOnMainThread(@NotNull Runnable action) {
+        if (Bukkit.isPrimaryThread()) {
+            action.run();
+        } else {
+            Bukkit.getScheduler().runTask(plugin, action);
+        }
+    }
+
+    private boolean hasServerPermission(@NotNull CommandSender sender) {
+        return sender.hasPermission("dbans.server.bypass") || sender.hasPermission("dbans.server.banip");
+    }
+
+    private boolean isServerArgumentSupported(@Nullable String targetServer) {
+        String mode = plugin.getMode();
+        return targetServer == null
+               || mode.equalsIgnoreCase("sync")
+               || mode.equalsIgnoreCase("sync_static");
+    }
+
+    private boolean isOnCooldown(@NotNull CommandSender sender) {
+        boolean onCooldown = sender instanceof Player player
+                             && plugin.getLimitsManager().isOnCooldown(player, COMMAND_NAME);
+        if (onCooldown) {
+            Player player = (Player) sender;
+            int remaining = plugin.getLimitsManager().getRemainingCooldown(player, COMMAND_NAME);
+            MessageUtil.send(sender, "command_on_cooldown",
+                             "command", COMMAND_NAME,
+                             "time", String.valueOf(remaining));
+        }
+        return onCooldown;
+    }
+
+    private record BanExecution(@NotNull CommandSender sender,
+                                @Nullable String targetServer,
+                                boolean silent,
+                                @NotNull BanIpTarget target,
+                                @NotNull String reason) {
+
+    }
+
 }
