@@ -21,29 +21,27 @@ public class PlayerServiceImpl implements PlayerService {
     @Override
     public @NotNull CompletableFuture<Optional<String>> findName(@NotNull UUID playerUuid) {
         PlayerInfo info = plugin.getDatabase().getPlayer(playerUuid);
+        final Optional<String> name;
         if (info != null && info.getName() != null) {
-            return CompletableFuture.completedFuture(Optional.of(info.getName()));
+            name = Optional.of(info.getName());
+        } else {
+            var off = Bukkit.getOfflinePlayer(playerUuid);
+            name = (off.hasPlayedBefore() || off.isOnline()) ? Optional.ofNullable(off.getName()) : Optional.empty();
         }
-
-        var off = Bukkit.getOfflinePlayer(playerUuid);
-        if (off.hasPlayedBefore() || off.isOnline()) {
-            return CompletableFuture.completedFuture(Optional.ofNullable(off.getName()));
-        }
-        return CompletableFuture.completedFuture(Optional.empty());
+        return CompletableFuture.completedFuture(name);
     }
 
     @Override
     public @NotNull CompletableFuture<Optional<UUID>> findUuid(@NotNull String playerName) {
         PlayerInfo info = plugin.getDatabase().getPlayerByName(playerName);
+        final Optional<UUID> uuid;
         if (info != null) {
-            return CompletableFuture.completedFuture(Optional.of(info.getUuid()));
+            uuid = Optional.of(info.getUuid());
+        } else {
+            var off = Bukkit.getOfflinePlayer(playerName);
+            uuid = (off.hasPlayedBefore() || off.isOnline()) ? Optional.of(off.getUniqueId()) : Optional.empty();
         }
-
-        var off = Bukkit.getOfflinePlayer(playerName);
-        if (off.hasPlayedBefore() || off.isOnline()) {
-            return CompletableFuture.completedFuture(Optional.of(off.getUniqueId()));
-        }
-        return CompletableFuture.completedFuture(Optional.empty());
+        return CompletableFuture.completedFuture(uuid);
     }
 
     @Override
