@@ -36,7 +36,7 @@ public final class PunishmentAdapter implements me.demro.dlibs.dbans.api.punishm
         this.targetName = punishment.getPlayerName();
         this.issuerUuid = punishment.getIssuerUuid();
         this.issuerName = punishment.getIssuerName();
-        this.type = mapType(punishment.getType());
+        this.type = PunishmentMapper.toApiType(punishment.getType());
         this.reason = punishment.getReason();
         this.startTime = punishment.getStartTime();
         this.endTime = punishment.getEndTime();
@@ -70,20 +70,6 @@ public final class PunishmentAdapter implements me.demro.dlibs.dbans.api.punishm
         this.endTime = warning.getEndTime();
         this.active = warning.isActive();
         this.serverName = warning.getServerName();
-    }
-
-    @Contract(pure = true)
-    private static me.demro.dlibs.dbans.api.punishment.PunishmentType mapType(
-            me.demro.dbans.model.@NotNull PunishmentType oldType
-    ) {
-        return switch (oldType) {
-            case BAN -> me.demro.dlibs.dbans.api.punishment.PunishmentType.BAN;
-            case MUTE -> me.demro.dlibs.dbans.api.punishment.PunishmentType.MUTE;
-            case KICK -> me.demro.dlibs.dbans.api.punishment.PunishmentType.KICK;
-            case IPBAN -> me.demro.dlibs.dbans.api.punishment.PunishmentType.IP_BAN;
-            case JAIL -> me.demro.dlibs.dbans.api.punishment.PunishmentType.JAIL;
-            case WARNING -> me.demro.dlibs.dbans.api.punishment.PunishmentType.WARNING;
-        };
     }
 
     @Contract(" -> new")

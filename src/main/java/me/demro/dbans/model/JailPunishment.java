@@ -12,7 +12,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder(toBuilder = true)
-public class JailPunishment {
+public class JailPunishment implements InternalPunishment {
 
     @Builder.Default
     private String id = Punishment.generateId();

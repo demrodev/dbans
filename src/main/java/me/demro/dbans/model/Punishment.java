@@ -13,7 +13,7 @@ import java.util.concurrent.ThreadLocalRandom;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder(toBuilder = true)
-public class Punishment {
+public class Punishment implements InternalPunishment {
 
     private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     private static final int ID_LENGTH = 5;

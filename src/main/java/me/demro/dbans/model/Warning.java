@@ -11,7 +11,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder(toBuilder = true)
-public class Warning {
+public class Warning implements InternalPunishment {
 
     @Builder.Default
     private String id = Punishment.generateId();
