@@ -43,15 +43,10 @@ public class PermissionServiceImpl implements PermissionService {
             @NotNull UUID issuerUuid,
             @NotNull UUID targetUuid
     ) {
-        if (CONSOLE_UUID.equals(issuerUuid)) {
-            return CompletableFuture.completedFuture(true);
-        }
-
         Player issuer = Bukkit.getPlayer(issuerUuid);
-        if (issuer == null) return CompletableFuture.completedFuture(false);
-
         OfflinePlayer target = plugin.getPlayerCache().getOfflinePlayer(targetUuid);
-        boolean can = plugin.getLimitsManager().canPunish(issuer, target);
+        boolean can = CONSOLE_UUID.equals(issuerUuid)
+                      || (issuer != null && plugin.getLimitsManager().canPunish(issuer, target));
         return CompletableFuture.completedFuture(can);
     }
 }
