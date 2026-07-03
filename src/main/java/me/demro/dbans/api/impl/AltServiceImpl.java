@@ -27,15 +27,19 @@ public class AltServiceImpl implements AltService {
     @Override
     public @NotNull CompletableFuture<List<AltAccount>> findAlts(@NotNull UUID playerUuid) {
         OfflinePlayer target = Bukkit.getOfflinePlayer(playerUuid);
-        if (!target.hasPlayedBefore() && !target.isOnline()) {
+        String targetName = target.getName();
+        if ((!target.hasPlayedBefore() && !target.isOnline()) || targetName == null) {
             return CompletableFuture.completedFuture(List.of());
         }
 
-        List<String> altNames = plugin.getAltAccountManager().findAltAccounts(target.getName());
+        List<String> altNames = plugin.getAltAccountManager().findAltAccounts(targetName);
         List<AltAccount> accounts = altNames.stream()
                                             .map(Bukkit::getOfflinePlayer)
-                                            .filter(p -> p.hasPlayedBefore() || p.isOnline())
-                                            .map(p -> new AltAccount(p.getUniqueId(), AltDetectionReason.SHARED_IP))
+                                            .filter(player -> player.hasPlayedBefore() || player.isOnline())
+                                            .map(p -> new AltAccount(
+                                                    p.getUniqueId(),
+                                                    AltDetectionReason.SHARED_IP
+                                            ))
                                             .collect(Collectors.toList());
 
         return CompletableFuture.completedFuture(accounts);
