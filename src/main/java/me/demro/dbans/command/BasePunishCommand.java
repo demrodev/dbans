@@ -1,5 +1,6 @@
 package me.demro.dbans.command;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import me.demro.dbans.util.MessageUtil;
@@ -11,6 +12,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -19,13 +21,28 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
+@RequiredArgsConstructor
 public abstract class BasePunishCommand implements CommandExecutor {
 
-    protected static final UUID CONSOLE_UUID = UUID.nameUUIDFromBytes("CONSOLE".getBytes());
+    private static final UUID CONSOLE_UUID = UUID.nameUUIDFromBytes("CONSOLE".getBytes());
     protected final DBans plugin;
 
-    protected BasePunishCommand(DBans plugin) {
-        this.plugin = plugin;
+    @Contract("_ -> new")
+    static @NotNull ParsedArgs parseArgs(String @NotNull [] args) {
+        boolean silent = false;
+        String targetServer = null;
+        List<String> filteredArgs = new ArrayList<>();
+        for (String arg : args) {
+            if (arg.equalsIgnoreCase("-s")) {
+                silent = true;
+            } else if (arg.toLowerCase().startsWith("server:")) {
+                String server = arg.substring(7);
+                targetServer = server.isEmpty() ? null : server;
+            } else {
+                filteredArgs.add(arg);
+            }
+        }
+        return new ParsedArgs(silent, targetServer, filteredArgs);
     }
 
     protected abstract PunishmentType getType(); // новый тип
@@ -38,12 +55,20 @@ public abstract class BasePunishCommand implements CommandExecutor {
                                               String finalServer, boolean silent, Long duration
     );
 
-    protected Long parseDuration(String[] args, int startIndex) {
+    protected Long parseDuration(String @NotNull [] args, int startIndex) {
+        if (args.length > startIndex && TimeUtil.isTimeFormat(args[startIndex])) {
+            try {
+                return TimeUtil.parseDuration(args[startIndex]);
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
         return null;
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, @NotNull String label, String[] args) {
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command cmd, @NotNull String label,
+                             String[] args
+    ) {
         String commandName = cmd.getName().toLowerCase();
 
         if (!sender.hasPermission(getPermission())) {
@@ -51,20 +76,10 @@ public abstract class BasePunishCommand implements CommandExecutor {
             return true;
         }
 
-        boolean silent = false;
-        String targetServer = null;
-        List<String> filteredArgs = new ArrayList<>();
-
-        for (String arg : args) {
-            if (arg.equalsIgnoreCase("-s")) {
-                silent = true;
-            } else if (arg.toLowerCase().startsWith("server:")) {
-                targetServer = arg.substring(7);
-                if (targetServer.isEmpty()) targetServer = null;
-            } else {
-                filteredArgs.add(arg);
-            }
-        }
+        ParsedArgs parsed = parseArgs(args);
+        boolean silent = parsed.silent();
+        String targetServer = parsed.targetServer();
+        List<String> filteredArgs = parsed.filteredArgs();
 
         if (filteredArgs.size() < 2) {
             MessageUtil.send(sender, "usage_" + commandName);
@@ -80,12 +95,12 @@ public abstract class BasePunishCommand implements CommandExecutor {
             }
         }
 
-        String targetName = filteredArgs.get(0);
+        String targetName = filteredArgs.getFirst();
         String reason;
         Long duration = null;
 
         // Обработка пресета
-        String lastArg = filteredArgs.get(filteredArgs.size() - 1);
+        String lastArg = filteredArgs.getLast();
         if (lastArg.startsWith("+")) {
             String presetName = lastArg.substring(1);
             PresetManager.PunishmentPreset preset = plugin.getPresetManager().getPreset(presetName);
@@ -134,7 +149,6 @@ public abstract class BasePunishCommand implements CommandExecutor {
                 reason = String.join(" ", filteredArgs.subList(2, filteredArgs.size()));
             } else {
                 reason = String.join(" ", filteredArgs.subList(1, filteredArgs.size()));
-                duration = null;
             }
         }
 
@@ -242,5 +256,9 @@ public abstract class BasePunishCommand implements CommandExecutor {
         // Выполняем наказание через новый API
         executePunishment(sender, target, reason, finalServer, silent, duration);
         return true;
+    }
+
+    record ParsedArgs(boolean silent, String targetServer, List<String> filteredArgs) {
+
     }
 }

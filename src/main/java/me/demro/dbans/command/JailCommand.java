@@ -36,17 +36,6 @@ public class JailCommand extends BasePunishCommand {
     }
 
     @Override
-    protected Long parseDuration(String[] args, int startIndex) {
-        if (args.length > startIndex && TimeUtil.isTimeFormat(args[startIndex])) {
-            try {
-                return TimeUtil.parseDuration(args[startIndex]);
-            } catch (IllegalArgumentException ignored) {
-            }
-        }
-        return null;
-    }
-
-    @Override
     protected void executePunishment(CommandSender sender, OfflinePlayer target, String reason, String finalServer,
                                      boolean silent, Long duration
     ) {
