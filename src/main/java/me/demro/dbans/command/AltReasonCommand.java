@@ -1,6 +1,6 @@
 package me.demro.dbans.command;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import me.demro.dbans.DBans;
 import me.demro.dbans.util.MessageUtil;
 import me.demro.dlibs.dbans.api.punishment.Punishment;
@@ -13,7 +13,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-@Slf4j
+@CustomLog
 public class AltReasonCommand implements CommandExecutor {
 
     private final DBans plugin;

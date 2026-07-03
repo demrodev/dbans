@@ -1,6 +1,6 @@
 package me.demro.dbans.command;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import me.demro.dbans.DBans;
 import me.demro.dbans.util.MessageUtil;
 import me.demro.dlibs.dbans.api.exception.PlayerNotFoundException;
@@ -21,7 +21,7 @@ import java.util.concurrent.CompletionException;
 
 import static java.util.Objects.requireNonNull;
 
-@Slf4j
+@CustomLog
 public class BanIpCommand implements CommandExecutor {
 
     private static final String COMMAND_NAME = "banip";

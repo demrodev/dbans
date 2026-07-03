@@ -1,6 +1,6 @@
 package me.demro.dbans.util;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import me.demro.dbans.DBans;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@Slf4j
+@CustomLog
 public class MessageUtil {
 
     private static final Map<String, String> cache = new HashMap<>();

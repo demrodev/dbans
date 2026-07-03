@@ -1,6 +1,6 @@
 package me.demro.dbans.util;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import me.demro.dbans.DBans;
 import me.demro.dbans.model.Punishment;
 import me.demro.dbans.model.PunishmentType;
@@ -14,7 +14,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-@Slf4j
+@CustomLog
 public class WarnManager {
 
     private final DBans plugin;

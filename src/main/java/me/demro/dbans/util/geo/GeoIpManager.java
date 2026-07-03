@@ -2,7 +2,7 @@ package me.demro.dbans.util.geo;
 
 import com.maxmind.geoip2.DatabaseReader;
 import com.maxmind.geoip2.model.CityResponse;
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import me.demro.dbans.DBans;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -10,7 +10,7 @@ import java.io.File;
 import java.net.InetAddress;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Slf4j
+@CustomLog
 public class GeoIpManager {
 
     private final DBans plugin;

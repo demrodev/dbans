@@ -1,6 +1,6 @@
 package me.demro.dbans.util;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import me.demro.dbans.DBans;
 import org.jetbrains.annotations.NotNull;
 
@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@Slf4j
+@CustomLog
 public class TimeUtil {
 
     private static final Pattern TIME_PATTERN = Pattern.compile("(\\d+)([smhd])");

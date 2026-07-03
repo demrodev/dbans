@@ -1,6 +1,6 @@
 package me.demro.dbans.service;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import me.demro.dbans.DBans;
 import me.demro.dbans.model.Punishment;
 import me.demro.dbans.model.PunishmentType;
@@ -13,9 +13,9 @@ import java.util.UUID;
 
 /**
  * Service for applying punishments using the new DBans API.
- * This class delegates all operations to {@link PunishmentService}.
+ * This class delegates all operations to {@link me.demro.dlibs.dbans.api.punishment.PunishmentService}.
  */
-@Slf4j
+@CustomLog
 public class PunishService {
 
     private final DBans plugin;

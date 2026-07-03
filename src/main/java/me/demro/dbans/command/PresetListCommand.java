@@ -1,6 +1,6 @@
 package me.demro.dbans.command;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import me.demro.dbans.DBans;
 import me.demro.dbans.util.MessageUtil;
 import me.demro.dbans.util.PresetManager.PunishmentPreset;
@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 
-@Slf4j
+@CustomLog
 public class PresetListCommand implements CommandExecutor {
 
     private final DBans plugin;

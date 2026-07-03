@@ -1,7 +1,7 @@
 package me.demro.dbans.listener;
 
 import io.papermc.paper.event.player.AsyncChatEvent;
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import me.demro.dbans.DBans;
 import me.demro.dbans.util.MessageUtil;
 import me.demro.dbans.util.TimeUtil;
@@ -18,7 +18,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-@Slf4j
+@CustomLog
 public class ChatListener implements Listener {
 
     private final DBans plugin;

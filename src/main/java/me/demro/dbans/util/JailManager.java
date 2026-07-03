@@ -1,6 +1,6 @@
 package me.demro.dbans.util;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import me.demro.dbans.DBans;
 import me.demro.dbans.model.JailPunishment;
 import me.demro.dbans.model.Punishment;
@@ -24,7 +24,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Slf4j
+@CustomLog
 public class JailManager {
 
     private final DBans plugin;

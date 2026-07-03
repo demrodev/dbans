@@ -1,6 +1,6 @@
 package me.demro.dbans.util;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import me.demro.dbans.DBans;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
@@ -12,7 +12,7 @@ import java.io.File;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Slf4j
+@CustomLog
 public class PresetManager {
 
     private final DBans plugin;

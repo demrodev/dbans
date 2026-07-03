@@ -1,7 +1,7 @@
 package me.demro.dbans.api.impl;
 
+import lombok.CustomLog;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import me.demro.dlibs.dbans.api.alt.AltAccount;
 import me.demro.dlibs.dbans.api.alt.AltDetectionReason;
@@ -16,9 +16,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
- * Implementation of {@link AltService} using DBans internal AltAccountManager.
+ * Implementation of {@link me.demro.dlibs.dbans.api.alt.AltService} using DBans internal AltAccountManager.
  */
-@Slf4j
+@CustomLog
 @RequiredArgsConstructor
 public class AltServiceImpl implements AltService {
 

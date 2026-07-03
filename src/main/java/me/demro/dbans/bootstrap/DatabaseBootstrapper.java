@@ -1,7 +1,7 @@
 package me.demro.dbans.bootstrap;
 
+import lombok.CustomLog;
 import lombok.experimental.UtilityClass;
-import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import me.demro.dbans.database.DatabaseManager;
 import me.demro.dbans.database.H2Database;
@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.sql.SQLException;
 
-@Slf4j
+@CustomLog
 @UtilityClass
 public final class DatabaseBootstrapper {
 

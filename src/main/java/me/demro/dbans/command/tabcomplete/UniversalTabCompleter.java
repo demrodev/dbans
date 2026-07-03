@@ -1,6 +1,6 @@
 package me.demro.dbans.command.tabcomplete;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import me.demro.dbans.DBans;
 import me.demro.dbans.model.JailPunishment;
 import me.demro.dbans.model.Punishment;
@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-@Slf4j
+@CustomLog
 public class UniversalTabCompleter implements TabCompleter {
 
     private final DBans plugin;

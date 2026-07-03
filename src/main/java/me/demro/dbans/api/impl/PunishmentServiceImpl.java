@@ -1,6 +1,6 @@
 package me.demro.dbans.api.impl;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import me.demro.dbans.DBans;
 import me.demro.dbans.api.adapter.PunishmentMapper;
 import me.demro.dbans.model.*;
@@ -31,7 +31,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-@Slf4j
+@CustomLog
 public class PunishmentServiceImpl implements PunishmentService {
 
     private final DBans plugin;

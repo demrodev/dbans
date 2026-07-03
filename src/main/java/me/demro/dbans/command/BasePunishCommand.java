@@ -1,7 +1,7 @@
 package me.demro.dbans.command;
 
+import lombok.CustomLog;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import me.demro.dbans.util.MessageUtil;
 import me.demro.dbans.util.PresetManager;
@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-@Slf4j
+@CustomLog
 @RequiredArgsConstructor
 public abstract class BasePunishCommand implements CommandExecutor {
 

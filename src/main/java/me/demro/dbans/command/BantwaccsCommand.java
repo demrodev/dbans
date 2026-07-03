@@ -1,6 +1,6 @@
 package me.demro.dbans.command;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import me.demro.dbans.DBans;
 import me.demro.dbans.model.Punishment;
 import me.demro.dbans.model.PunishmentType;
@@ -15,7 +15,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 import java.util.UUID;
 
-@Slf4j
+@CustomLog
 public class BantwaccsCommand implements CommandExecutor {
 
     private final DBans plugin;

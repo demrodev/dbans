@@ -1,6 +1,6 @@
 package me.demro.dbans.listener;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import me.demro.dbans.DBans;
 import me.demro.dbans.model.PlayerInfo;
 import me.demro.dbans.model.Punishment;
@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-@Slf4j
+@CustomLog
 public class LoginListener implements Listener {
 
     private final DBans plugin;

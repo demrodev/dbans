@@ -1,6 +1,6 @@
 package me.demro.dbans.command;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import me.demro.dbans.DBans;
 import me.demro.dbans.util.MessageUtil;
 import org.bukkit.Bukkit;
@@ -13,7 +13,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.net.InetAddress;
 
-@Slf4j
+@CustomLog
 public class GeoIpCommand implements CommandExecutor {
 
     private final DBans plugin;

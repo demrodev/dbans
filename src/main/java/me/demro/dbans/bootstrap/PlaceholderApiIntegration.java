@@ -1,12 +1,12 @@
 package me.demro.dbans.bootstrap;
 
+import lombok.CustomLog;
 import lombok.experimental.UtilityClass;
-import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import me.demro.dbans.placeholder.DBansExpansion;
 import org.bukkit.Bukkit;
 
-@Slf4j
+@CustomLog
 @UtilityClass
 public final class PlaceholderApiIntegration {
 

@@ -1,6 +1,6 @@
 package me.demro.dbans.command;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import me.demro.dbans.DBans;
 import me.demro.dbans.util.MessageUtil;
 import me.demro.dbans.util.TimeUtil;
@@ -13,7 +13,7 @@ import org.bukkit.entity.Player;
 
 import java.time.Duration;
 
-@Slf4j
+@CustomLog
 public class TempBanCommand extends BasePunishCommand {
 
     public TempBanCommand(DBans plugin) {

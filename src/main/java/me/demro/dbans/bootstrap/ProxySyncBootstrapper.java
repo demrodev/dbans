@@ -1,14 +1,14 @@
 package me.demro.dbans.bootstrap;
 
+import lombok.CustomLog;
 import lombok.experimental.UtilityClass;
-import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import me.demro.dbans.sync.Constants;
 import me.demro.dbans.sync.ProxySyncManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-@Slf4j
+@CustomLog
 @UtilityClass
 public final class ProxySyncBootstrapper {
 

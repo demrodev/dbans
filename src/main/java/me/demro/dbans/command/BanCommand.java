@@ -1,6 +1,6 @@
 package me.demro.dbans.command;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import me.demro.dbans.DBans;
 import me.demro.dbans.util.MessageUtil;
 import me.demro.dlibs.dbans.api.exception.InvalidPunishmentRequestException;
@@ -11,7 +11,7 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-@Slf4j
+@CustomLog
 public class BanCommand extends BasePunishCommand {
 
     public BanCommand(DBans plugin) {

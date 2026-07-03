@@ -1,7 +1,7 @@
 package me.demro.dbans.sync;
 
 import com.google.gson.Gson;
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import me.demro.dbans.DBans;
 import me.demro.dbans.model.JailPunishment;
 import me.demro.dbans.model.Punishment;
@@ -19,7 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-@Slf4j
+@CustomLog
 public class ProxySyncManager implements PluginMessageListener {
 
     private final DBans plugin;

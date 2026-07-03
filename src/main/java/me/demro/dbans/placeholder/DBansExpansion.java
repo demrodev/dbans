@@ -1,13 +1,13 @@
 package me.demro.dbans.placeholder;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import me.demro.dbans.DBans;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-@Slf4j
+@CustomLog
 public class DBansExpansion extends PlaceholderExpansion {
 
     private final DBans plugin;

@@ -1,7 +1,7 @@
 package me.demro.dbans.util;
 
+import lombok.CustomLog;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.DBans;
 import me.demro.dbans.api.adapter.PunishmentAdapter;
 import me.demro.dbans.model.Punishment;
@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Slf4j
+@CustomLog
 @RequiredArgsConstructor
 public class MuteExpiryScheduler {
 

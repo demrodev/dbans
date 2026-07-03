@@ -1,6 +1,6 @@
 package me.demro.dbans.util;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 
@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Кэш для быстрого получения OfflinePlayer по имени или UUID.
  * Обновляется при входе игрока и при необходимости.
  */
-@Slf4j
+@CustomLog
 public class PlayerCache {
 
     private final Map<String, UUID> nameToUuid = new ConcurrentHashMap<>();

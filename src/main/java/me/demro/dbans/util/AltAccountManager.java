@@ -1,12 +1,12 @@
 package me.demro.dbans.util;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import me.demro.dbans.DBans;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Slf4j
+@CustomLog
 public class AltAccountManager {
 
     private final DBans plugin;

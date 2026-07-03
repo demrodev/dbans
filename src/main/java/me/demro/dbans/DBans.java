@@ -1,7 +1,7 @@
 package me.demro.dbans;
 
+import lombok.CustomLog;
 import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
 import me.demro.dbans.api.impl.DBansAPIImpl;
 import me.demro.dbans.bootstrap.*;
 import me.demro.dbans.database.DatabaseManager;
@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-@Slf4j
+@CustomLog
 @Getter
 public final class DBans extends JavaPlugin {
 

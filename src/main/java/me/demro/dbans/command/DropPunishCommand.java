@@ -1,6 +1,6 @@
 package me.demro.dbans.command;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import me.demro.dbans.DBans;
 import me.demro.dbans.model.Punishment;
 import me.demro.dbans.model.PunishmentType;
@@ -10,7 +10,7 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 
-@Slf4j
+@CustomLog
 public class DropPunishCommand implements CommandExecutor {
 
     private final DBans plugin;

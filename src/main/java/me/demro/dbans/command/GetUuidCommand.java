@@ -1,6 +1,6 @@
 package me.demro.dbans.command;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import me.demro.dbans.util.MessageUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -9,7 +9,7 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 
-@Slf4j
+@CustomLog
 public class GetUuidCommand implements CommandExecutor {
 
     @Override

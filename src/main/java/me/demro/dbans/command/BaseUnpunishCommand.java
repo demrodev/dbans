@@ -1,6 +1,6 @@
 package me.demro.dbans.command;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import me.demro.dbans.DBans;
 import me.demro.dbans.util.MessageUtil;
 import me.demro.dlibs.dbans.api.exception.PunishmentNotFoundException;
@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-@Slf4j
+@CustomLog
 public abstract class BaseUnpunishCommand implements CommandExecutor {
 
     protected final DBans plugin;

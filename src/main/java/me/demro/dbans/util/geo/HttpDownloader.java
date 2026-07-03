@@ -1,6 +1,6 @@
 package me.demro.dbans.util.geo;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -8,7 +8,7 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-@Slf4j
+@CustomLog
 public class HttpDownloader {
 
     public static boolean downloadFile(String urlString, File destination) {
